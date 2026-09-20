@@ -187,6 +187,15 @@ footer.sig b{color:var(--primary);}
 .vote-btn.danger{border-color:var(--against);color:var(--against);opacity:.75;}
 .vote-btn.danger:hover{background:var(--against);color:#fff;opacity:1;}
 
+.pending-banner{
+  display:none;background:var(--unsure-bg);border:1px solid var(--unsure);color:#7a5a1c;
+  border-radius:9px;padding:11px 16px;font-size:13.5px;font-weight:700;margin-bottom:14px;
+}
+.pending-banner.show{display:block;}
+.member-row.not-voted{
+  background:#fdf9ef;box-shadow:inset 3px 0 0 var(--accent);
+}
+
 .modal-overlay{
   position:fixed;inset:0;background:rgba(18,24,20,0.45);
   display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
@@ -289,8 +298,11 @@ footer.sig b{color:var(--primary);}
       <button class="tab-btn" data-tab="against" onclick="setTab('against')">مش معانا <span class="count" id="cAgainst">0</span></button>
       <button class="tab-btn" data-tab="unsure" onclick="setTab('unsure')">مشكوك فيهم <span class="count" id="cUnsure">0</span></button>
       <button class="tab-btn" data-tab="none" onclick="setTab('none')">لم يُصنّف <span class="count" id="cNone">0</span></button>
+      <button class="tab-btn" data-tab="pending" onclick="setTab('pending')">لم أصوّت عليهم بعد <span class="count" id="cPending">0</span></button>
       <button class="tab-btn" data-tab="deleted" onclick="setTab('deleted')">المحذوفون <span class="count" id="cDeleted">0</span></button>
     </div>
+
+    <div class="pending-banner" id="pendingBanner"></div>
 
     <div class="toolbar">
       <input type="text" id="searchBox" placeholder="بحث بالاسم..." oninput="renderList()">
@@ -449,6 +461,8 @@ function showApp(){
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   document.getElementById("currentUserName").textContent = currentUser.name;
+  renderStats();
+  renderList();
 }
 
 /* ================= Firebase sync ================= */
@@ -544,7 +558,12 @@ function confirmAddMember(){
 function deleteMember(memberId){
   const m = membersById[memberId];
   if(!m) return;
-  if(!confirm(`هل أنت متأكد من حذف "${m.name}" من الجمعية العمومية؟`)) return;
+  const pass = prompt(`لتأكيد حذف "${m.name}" أدخل كلمة سر الحذف:`);
+  if(pass === null) return;
+  if(pass !== "521988"){
+    alert("كلمة السر غير صحيحة، لم يتم الحذف");
+    return;
+  }
   db.ref("assembly/deleted/" + memberId).set(true);
   addLog(`${currentUser.name} قام بحذف "${m.name}" من الجمعية العمومية`);
 }
@@ -589,6 +608,16 @@ function renderStats(){
   document.getElementById("cUnsure").textContent = unsureC;
   document.getElementById("cNone").textContent = members.filter(m => !m.status).length;
   document.getElementById("cDeleted").textContent = deletedMembers.length;
+
+  const pendingCount = currentUser ? members.filter(m => !m.votes[currentUser.key]).length : 0;
+  document.getElementById("cPending").textContent = pendingCount;
+  const banner = document.getElementById("pendingBanner");
+  if(currentUser && pendingCount > 0){
+    banner.textContent = `لسه لك ${pendingCount} عضو لم تصوّت عليهم بعد — الأسماء المميزة باللون الفاتح فى القائمة أدناه.`;
+    banner.classList.add("show");
+  } else {
+    banner.classList.remove("show");
+  }
 }
 
 function renderLog(entries){
@@ -614,12 +643,14 @@ function filteredMembers(){
   const q = document.getElementById("searchBox").value.trim();
   let list = currentTab === "deleted" ? deletedMembers : members;
   if(currentTab === "none") list = list.filter(m => !m.status);
+  else if(currentTab === "pending") list = list.filter(m => !m.votes[currentUser.key]);
   else if(currentTab !== "all" && currentTab !== "deleted") list = list.filter(m => m.status === currentTab);
   if(q) list = list.filter(m => m.name.includes(q));
   return list;
 }
 
 function renderList(){
+  if(!currentUser) return;
   const list = filteredMembers();
   const wrap = document.getElementById("listWrap");
   if(!list.length){
@@ -642,7 +673,7 @@ function renderList(){
     const mine = m.votes[currentUser.key];
     const statusClass = m.status || "none";
     return `
-    <div class="member-row">
+    <div class="member-row ${mine ? '' : 'not-voted'}">
       <span class="m-idx">${m.idx}</span>
       <span class="m-name">${escapeHtml(m.name)}</span>
       <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
@@ -668,6 +699,7 @@ const TAB_TITLES = {
   against: "قائمة الأعضاء المعارضين (مش معانا 100%)",
   unsure: "قائمة الأعضاء المشكوك فى أمرهم",
   none: "قائمة الأعضاء غير المصنفين",
+  pending: "الأعضاء الذين لم يصوّت عليهم",
   deleted: "قائمة الأعضاء المحذوفين"
 };
 function printCurrentList(){
