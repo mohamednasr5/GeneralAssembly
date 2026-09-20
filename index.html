@@ -24,6 +24,8 @@
   --against-bg:#faeaea;
   --unsure:#c08a2e;
   --unsure-bg:#faf1de;
+  --travel:#2f6a8c;
+  --travel-bg:#e7f1f6;
   --radius:10px;
   --shadow:0 2px 10px rgba(18,60,52,0.08);
 }
@@ -104,7 +106,8 @@ header.topbar .title p{margin:2px 0 0;font-size:12.5px;color:#c9dcd6;}
 main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
 
 /* stats */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+@media(max-width:960px){.stats{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr);}}
 .stat-card{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
@@ -117,6 +120,7 @@ main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
 .stat-with .num{color:var(--with);}
 .stat-against .num{color:var(--against);}
 .stat-unsure .num{color:var(--unsure);}
+.stat-travel .num{color:var(--travel);}
 .bar-track{height:6px;border-radius:4px;background:var(--line);margin-top:8px;overflow:hidden;}
 .bar-fill{height:100%;border-radius:4px;}
 
@@ -164,6 +168,7 @@ main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
 .m-status.with{background:var(--with-bg);color:var(--with);}
 .m-status.against{background:var(--against-bg);color:var(--against);}
 .m-status.unsure{background:var(--unsure-bg);color:var(--unsure);}
+.m-status.travel{background:var(--travel-bg);color:var(--travel);}
 .m-status.none{background:#f0eee7;color:var(--muted);}
 .m-votes{font-size:11px;color:var(--muted);flex:none;}
 .m-actions{display:flex;gap:6px;flex-wrap:wrap;}
@@ -178,6 +183,8 @@ main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
 .vote-btn.against:hover,.vote-btn.against.mine{background:var(--against);color:#fff;}
 .vote-btn.unsure{border-color:var(--unsure);color:var(--unsure);}
 .vote-btn.unsure:hover,.vote-btn.unsure.mine{background:var(--unsure);color:#fff;}
+.vote-btn.travel{border-color:var(--travel);color:var(--travel);}
+.vote-btn.travel:hover,.vote-btn.travel.mine{background:var(--travel);color:#fff;}
 .empty-list{padding:30px;text-align:center;color:var(--muted);font-size:13.5px;}
 
 footer.sig{
@@ -337,6 +344,11 @@ footer.sig b{color:var(--primary);}
         <div class="lbl">مشكوك فى أمره <span class="pct" id="pctUnsure">0%</span></div>
         <div class="bar-track"><div class="bar-fill" id="barUnsure" style="background:var(--unsure);width:0%"></div></div>
       </div>
+      <div class="stat-card stat-travel">
+        <div class="num" id="statTravel">0</div>
+        <div class="lbl">مسافر <span class="pct" id="pctTravel">0%</span></div>
+        <div class="bar-track"><div class="bar-fill" id="barTravel" style="background:var(--travel);width:0%"></div></div>
+      </div>
     </div>
 
     <!-- Activity log -->
@@ -351,6 +363,7 @@ footer.sig b{color:var(--primary);}
       <button class="tab-btn" data-tab="with" onclick="setTab('with')">معانا <span class="count" id="cWith">0</span></button>
       <button class="tab-btn" data-tab="against" onclick="setTab('against')">مش معانا <span class="count" id="cAgainst">0</span></button>
       <button class="tab-btn" data-tab="unsure" onclick="setTab('unsure')">مشكوك فيهم <span class="count" id="cUnsure">0</span></button>
+      <button class="tab-btn" data-tab="travel" onclick="setTab('travel')">مسافرون <span class="count" id="cTravel">0</span></button>
       <button class="tab-btn" data-tab="none" onclick="setTab('none')">لم يُصنّف <span class="count" id="cNone">0</span></button>
       <button class="tab-btn" data-tab="pending" onclick="setTab('pending')">لم أصوّت عليهم بعد <span class="count" id="cPending">0</span></button>
       <button class="tab-btn" data-tab="deleted" onclick="setTab('deleted')">المحذوفون <span class="count" id="cDeleted">0</span></button>
@@ -501,6 +514,7 @@ function choiceLabel(c){
   if(c === "with") return "معانا 100%";
   if(c === "against") return "مش معانا 100%";
   if(c === "unsure") return "مشكوك فى أمره";
+  if(c === "travel") return "مسافر";
   return "غير مصنف";
 }
 
@@ -574,10 +588,10 @@ function attachListeners(){
 }
 
 function computeStatusFromVotes(votes){
-  const counts = { with: 0, against: 0, unsure: 0 };
+  const counts = { with: 0, against: 0, unsure: 0, travel: 0 };
   Object.values(votes).forEach(v => { if(counts[v] !== undefined) counts[v]++; });
   let winner = null;
-  ["with","against","unsure"].forEach(k => {
+  ["with","against","unsure","travel"].forEach(k => {
     if(counts[k] >= VOTE_THRESHOLD && (winner === null || counts[k] > counts[winner])) winner = k;
   });
   return { counts, winner };
@@ -667,23 +681,28 @@ function renderStats(){
   const withC = members.filter(m => m.status === "with").length;
   const againstC = members.filter(m => m.status === "against").length;
   const unsureC = members.filter(m => m.status === "unsure").length;
+  const travelC = members.filter(m => m.status === "travel").length;
   const pct = n => total ? Math.round((n/total)*1000)/10 : 0;
 
   document.getElementById("statTotal").textContent = total;
   document.getElementById("statWith").textContent = withC;
   document.getElementById("statAgainst").textContent = againstC;
   document.getElementById("statUnsure").textContent = unsureC;
+  document.getElementById("statTravel").textContent = travelC;
   document.getElementById("pctWith").textContent = pct(withC) + "%";
   document.getElementById("pctAgainst").textContent = pct(againstC) + "%";
   document.getElementById("pctUnsure").textContent = pct(unsureC) + "%";
+  document.getElementById("pctTravel").textContent = pct(travelC) + "%";
   document.getElementById("barWith").style.width = pct(withC) + "%";
   document.getElementById("barAgainst").style.width = pct(againstC) + "%";
   document.getElementById("barUnsure").style.width = pct(unsureC) + "%";
+  document.getElementById("barTravel").style.width = pct(travelC) + "%";
 
   document.getElementById("cAll").textContent = total;
   document.getElementById("cWith").textContent = withC;
   document.getElementById("cAgainst").textContent = againstC;
   document.getElementById("cUnsure").textContent = unsureC;
+  document.getElementById("cTravel").textContent = travelC;
   document.getElementById("cNone").textContent = members.filter(m => !m.status).length;
   document.getElementById("cDeleted").textContent = deletedMembers.length;
 
@@ -761,11 +780,12 @@ function renderList(){
       <span class="m-idx">${m.idx}</span>
       <span class="m-name">${escapeHtml(m.name)}</span>
       <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
-      <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure}</span>
+      <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure} · س:${counts.travel}</span>
       <span class="m-actions">
         <button class="vote-btn with ${mine==='with'?'mine':''}" onclick="castVote('${m.id}','with')">معانا 100%</button>
         <button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button>
         <button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button>
+        <button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button>
         <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
       </span>
     </div>`;
@@ -782,6 +802,7 @@ const TAB_TITLES = {
   with: "قائمة الأعضاء المؤيدين (معانا 100%)",
   against: "قائمة الأعضاء المعارضين (مش معانا 100%)",
   unsure: "قائمة الأعضاء المشكوك فى أمرهم",
+  travel: "قائمة الأعضاء المسافرين",
   none: "قائمة الأعضاء غير المصنفين",
   pending: "الأعضاء الذين لم يصوّت عليهم",
   deleted: "قائمة الأعضاء المحذوفين"
