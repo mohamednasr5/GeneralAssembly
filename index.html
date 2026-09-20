@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>أعضاء الجمعية العمومية - مركز شباب الأحمدية</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,6 +34,7 @@ body{
   background:var(--bg);
   color:var(--ink);
   min-height:100vh;
+  padding-top:env(safe-area-inset-top,0px);
 }
 .hidden{display:none !important;}
 
@@ -212,6 +213,59 @@ footer.sig b{color:var(--primary);}
 }
 .btn-ghost-dark:hover{background:#f0eee7;}
 
+/* ---------- Bottom mobile nav ---------- */
+.bottom-nav{
+  display:none;
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:var(--primary);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -6px 20px rgba(0,0,0,0.22);
+  align-items:center;justify-content:space-between;
+  border-top:1px solid rgba(255,255,255,0.08);
+}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;color:#a9c3bc;padding:6px 2px;font-family:'Cairo',sans-serif;
+  font-size:10.5px;font-weight:700;position:relative;cursor:pointer;
+}
+.bn-item svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.bn-item.active{color:var(--accent);}
+.bn-dot{
+  position:absolute;top:2px;left:calc(50% + 10px);width:8px;height:8px;border-radius:50%;
+  background:var(--accent);display:none;
+}
+.bn-dot.show{display:block;}
+.bn-add{
+  flex:none;width:52px;height:52px;border-radius:50%;
+  background:var(--accent);color:var(--primary);border:4px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;margin-top:-26px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;
+}
+.bn-add svg{width:24px;height:24px;stroke:var(--primary);stroke-width:2.6;fill:none;stroke-linecap:round;}
+
+@media(max-width:720px){
+  .bottom-nav{display:flex;}
+  main{padding-bottom:96px;}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
+  .tabs::-webkit-scrollbar{height:0;}
+  .tab-btn{flex:none;}
+  header.topbar{padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;}
+  main{padding-left:14px;padding-right:14px;}
+  .toolbar{flex-direction:column;align-items:stretch;}
+  .toolbar > div{display:flex;gap:8px;}
+  .toolbar .btn-print{flex:1;}
+  .toolbar input[type=text]{max-width:100%;}
+  .member-row{flex-direction:column;align-items:stretch;gap:8px;}
+  .m-idx{width:auto;}
+  .m-status,.m-votes{align-self:flex-start;}
+  .m-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .m-actions .vote-btn{width:100%;padding:9px 8px;}
+  .m-actions .vote-btn.danger{grid-column:1 / -1;}
+}
+@media(max-width:400px){
+  .stat-card .num{font-size:23px;}
+}
+
 /* Print */
 #printArea{display:none;}
 @media print{
@@ -316,12 +370,36 @@ footer.sig b{color:var(--primary);}
 
     <footer class="sig">برمجة وتطوير <b>م/ محمد حماد</b></footer>
   </main>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bn-item active" data-nav="all" onclick="bottomNavGo('all')">
+      <svg viewBox="0 0 24 24"><path d="M4 21v-2a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="3"/><path d="M16 3.5a3 3 0 0 1 0 5.8"/><path d="M18 21v-1.6a3.9 3.9 0 0 0-2.3-3.6"/></svg>
+      <span>الكل</span>
+    </button>
+    <button class="bn-item" data-nav="pending" onclick="bottomNavGo('pending')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span>متبقّي لى</span>
+      <i class="bn-dot" id="bnPendingDot"></i>
+    </button>
+    <button class="bn-add" onclick="openAddModal()" aria-label="إضافة عضو">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="bn-item" data-nav="with" onclick="bottomNavGo('with')">
+      <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>معانا</span>
+    </button>
+    <button class="bn-item" data-nav="against" onclick="bottomNavGo('against')">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <span>مش معانا</span>
+    </button>
+  </nav>
 </div>
 
 <!-- ===================== ADD MEMBER MODAL ===================== -->
 <div id="addModal" class="modal-overlay hidden">
   <div class="modal-card">
     <h3>إضافة عضو جديد للجمعية</h3>
+
     <label for="addMemberInput">اسم العضو</label>
     <input type="text" id="addMemberInput" placeholder="اكتب اسم العضو بالكامل">
     <div class="modal-actions">
@@ -611,6 +689,7 @@ function renderStats(){
 
   const pendingCount = currentUser ? members.filter(m => !m.votes[currentUser.key]).length : 0;
   document.getElementById("cPending").textContent = pendingCount;
+  document.getElementById("bnPendingDot").classList.toggle("show", pendingCount > 0);
   const banner = document.getElementById("pendingBanner");
   if(currentUser && pendingCount > 0){
     banner.textContent = `لسه لك ${pendingCount} عضو لم تصوّت عليهم بعد — الأسماء المميزة باللون الفاتح فى القائمة أدناه.`;
@@ -636,7 +715,12 @@ function renderLog(entries){
 function setTab(tab){
   currentTab = tab;
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".bn-item").forEach(b => b.classList.toggle("active", b.dataset.nav === tab));
   renderList();
+}
+function bottomNavGo(tab){
+  setTab(tab);
+  document.querySelector(".list-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function filteredMembers(){
