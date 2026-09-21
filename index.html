@@ -96,6 +96,10 @@ header.topbar{
 header.topbar .title h1{font-size:17px;margin:0;font-weight:800;}
 header.topbar .title p{margin:2px 0 0;font-size:12.5px;color:#c9dcd6;}
 .who{display:flex;align-items:center;gap:12px;font-size:13px;}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#cfe4de;background:rgba(255,255,255,0.08);padding:5px 10px;border-radius:999px;}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:#e0a93a;flex:none;}
+.conn-badge.live .conn-dot{background:#4fd18c;}
+.conn-badge.offline .conn-dot{background:#e05a5a;}
 .who .name{font-weight:700;}
 .btn-ghost{
   background:transparent;border:1px solid rgba(255,255,255,0.4);color:#fff;
@@ -171,7 +175,12 @@ main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
 .m-status.travel{background:var(--travel-bg);color:var(--travel);}
 .m-status.none{background:#f0eee7;color:var(--muted);}
 .m-votes{font-size:11px;color:var(--muted);flex:none;}
-.m-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.m-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;}
+.vote-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:3px;}
+.vote-count{
+  font-size:10.5px;font-weight:800;color:var(--muted);line-height:1;
+  min-width:16px;text-align:center;
+}
 .vote-btn{
   border:1px solid var(--line);background:#fcfbf8;color:var(--ink);
   padding:7px 12px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;
@@ -265,9 +274,10 @@ footer.sig b{color:var(--primary);}
   .member-row{flex-direction:column;align-items:stretch;gap:8px;}
   .m-idx{width:auto;}
   .m-status,.m-votes{align-self:flex-start;}
-  .m-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-  .m-actions .vote-btn{width:100%;padding:9px 8px;}
-  .m-actions .vote-btn.danger{grid-column:1 / -1;}
+  .m-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;}
+  .m-actions .vote-wrap{width:100%;}
+  .m-actions .vote-wrap .vote-btn{width:100%;padding:9px 8px;}
+  .m-actions .vote-btn.danger{grid-column:1 / -1;width:100%;padding:9px 8px;}
 }
 @media(max-width:400px){
   .stat-card .num{font-size:23px;}
@@ -317,6 +327,7 @@ footer.sig b{color:var(--primary);}
       <p>مركز شباب الأحمدية</p>
     </div>
     <div class="who">
+      <span class="conn-badge" id="connBadge"><i class="conn-dot"></i><span id="connText">جارٍ الاتصال...</span></span>
       <span>مرحباً، <span class="name" id="currentUserName"></span></span>
       <button class="btn-ghost" onclick="doLogout()">تسجيل الخروج</button>
     </div>
@@ -559,6 +570,19 @@ function showApp(){
 
 /* ================= Firebase sync ================= */
 function attachListeners(){
+  db.ref(".info/connected").on("value", snap => {
+    const badge = document.getElementById("connBadge");
+    const text = document.getElementById("connText");
+    if(!badge) return;
+    if(snap.val() === true){
+      badge.className = "conn-badge live";
+      text.textContent = "متصل مباشر — يتحدث تلقائياً";
+    } else {
+      badge.className = "conn-badge offline";
+      text.textContent = "غير متصل، جارٍ إعادة المحاولة...";
+    }
+  });
+
   db.ref("assembly/members").on("value", snap => {
     membersDataRaw = snap.val() || {};
     rebuildMembers();
@@ -641,6 +665,12 @@ function closeAddModal(){
 function confirmAddMember(){
   const name = document.getElementById("addMemberInput").value.trim();
   if(!name) return;
+  const pass = prompt(`لتأكيد إضافة "${name}" أدخل كلمة سر الإضافة:`);
+  if(pass === null) return;
+  if(pass !== "521988"){
+    alert("كلمة السر غير صحيحة، لم تتم الإضافة");
+    return;
+  }
   const newRef = db.ref("assembly/extra").push();
   newRef.set({ name: name, addedBy: currentUser.name, addedAt: Date.now() });
   addLog(`${currentUser.name} أضاف عضو جديد للجمعية: "${name}"`);
@@ -782,10 +812,10 @@ function renderList(){
       <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
       <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure} · س:${counts.travel}</span>
       <span class="m-actions">
-        <button class="vote-btn with ${mine==='with'?'mine':''}" onclick="castVote('${m.id}','with')">معانا 100%</button>
-        <button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button>
-        <button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button>
-        <button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button>
+        <span class="vote-wrap"><span class="vote-count">${counts.with}</span><button class="vote-btn with ${mine==='with'?'mine':''}" onclick="castVote('${m.id}','with')">معانا 100%</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.against}</span><button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.unsure}</span><button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.travel}</span><button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button></span>
         <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
       </span>
     </div>`;
