@@ -665,6 +665,11 @@ function closeAddModal(){
 function confirmAddMember(){
   const name = document.getElementById("addMemberInput").value.trim();
   if(!name) return;
+  const exists = members.some(m => m.name.trim() === name) || deletedMembers.some(m => m.name.trim() === name);
+  if(exists){
+    alert(`"${name}" موجود بالفعل فى قائمة أعضاء الجمعية`);
+    return;
+  }
   const pass = prompt(`لتأكيد إضافة "${name}" أدخل كلمة سر الإضافة:`);
   if(pass === null) return;
   if(pass !== "521988"){
