@@ -378,6 +378,7 @@ footer.sig b{color:var(--primary);}
       <button class="tab-btn" data-tab="none" onclick="setTab('none')">لم يُصنّف <span class="count" id="cNone">0</span></button>
       <button class="tab-btn" data-tab="pending" onclick="setTab('pending')">لم أصوّت عليهم بعد <span class="count" id="cPending">0</span></button>
       <button class="tab-btn" data-tab="deleted" onclick="setTab('deleted')">المحذوفون <span class="count" id="cDeleted">0</span></button>
+      <button class="tab-btn" data-tab="similar" onclick="setTab('similar')">أسماء متشابهة <span class="count" id="cSimilar">0</span></button>
     </div>
 
     <div class="pending-banner" id="pendingBanner"></div>
@@ -483,6 +484,7 @@ let membersDataRaw = {}; // id -> {votes,status,manual,updatedBy,updatedAt}
 let members = [];      // active (non-deleted) members, rebuilt on every change
 let deletedMembers = []; // deleted members, for the "المحذوفون" tab
 let membersById = {};
+let similarGroups = []; // clusters of members with near-identical names
 
 function rebuildMembers(){
   const all = baseMembers.concat(
@@ -512,6 +514,59 @@ function rebuildMembers(){
       members.push(m);
     }
   });
+  similarGroups = computeSimilarGroups(members);
+}
+
+/* ---- الأسماء المتشابهة ---- */
+function normalizeArabicName(s){
+  return s
+    .replace(/[\u064B-\u0652\u0670]/g, "")
+    .replace(/[إأآا]/g, "ا")
+    .replace(/[ة]/g, "ه")
+    .replace(/[ى]/g, "ي")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function levenshtein(a, b){
+  const al = a.length, bl = b.length;
+  if(al === 0) return bl;
+  if(bl === 0) return al;
+  const dp = new Array(bl + 1);
+  for(let j = 0; j <= bl; j++) dp[j] = j;
+  for(let i = 1; i <= al; i++){
+    let prev = dp[0];
+    dp[0] = i;
+    for(let j = 1; j <= bl; j++){
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  return dp[bl];
+}
+function computeSimilarGroups(list){
+  const n = list.length;
+  const norm = list.map(m => normalizeArabicName(m.name));
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(x){ while(parent[x] !== x){ parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  function union(a, b){ const ra = find(a), rb = find(b); if(ra !== rb) parent[ra] = rb; }
+  for(let i = 0; i < n; i++){
+    for(let j = i + 1; j < n; j++){
+      if(norm[i] === norm[j]){ union(i, j); continue; }
+      const maxLen = Math.max(norm[i].length, norm[j].length);
+      if(maxLen === 0) continue;
+      const dist = levenshtein(norm[i], norm[j]);
+      if(dist > 0 && dist <= 3 && (dist / maxLen) <= 0.18){
+        union(i, j);
+      }
+    }
+  }
+  const groupsMap = {};
+  for(let i = 0; i < n; i++){
+    const r = find(i);
+    (groupsMap[r] = groupsMap[r] || []).push(list[i]);
+  }
+  return Object.values(groupsMap).filter(g => g.length > 1);
 }
 
 let currentUser = null; // { name, key }
@@ -740,6 +795,7 @@ function renderStats(){
   document.getElementById("cTravel").textContent = travelC;
   document.getElementById("cNone").textContent = members.filter(m => !m.status).length;
   document.getElementById("cDeleted").textContent = deletedMembers.length;
+  document.getElementById("cSimilar").textContent = similarGroups.reduce((s, g) => s + g.length, 0);
 
   const pendingCount = currentUser ? members.filter(m => !m.votes[currentUser.key]).length : 0;
   document.getElementById("cPending").textContent = pendingCount;
@@ -782,15 +838,53 @@ function filteredMembers(){
   let list = currentTab === "deleted" ? deletedMembers : members;
   if(currentTab === "none") list = list.filter(m => !m.status);
   else if(currentTab === "pending") list = list.filter(m => !m.votes[currentUser.key]);
+  else if(currentTab === "similar") list = similarGroups.flat();
   else if(currentTab !== "all" && currentTab !== "deleted") list = list.filter(m => m.status === currentTab);
   if(q) list = list.filter(m => m.name.includes(q));
   return list;
 }
 
+function memberRowHtml(m){
+  const counts = computeStatusFromVotes(m.votes).counts;
+  const mine = m.votes[currentUser.key];
+  const statusClass = m.status || "none";
+  return `
+    <div class="member-row ${mine ? '' : 'not-voted'}">
+      <span class="m-idx">${m.idx}</span>
+      <span class="m-name">${escapeHtml(m.name)}</span>
+      <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
+      <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure} · س:${counts.travel}</span>
+      <span class="m-actions">
+        <span class="vote-wrap"><span class="vote-count">${counts.with}</span><button class="vote-btn with ${mine==='with'?'mine':''}" onclick="castVote('${m.id}','with')">معانا 100%</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.against}</span><button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.unsure}</span><button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.travel}</span><button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button></span>
+        <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
+      </span>
+    </div>`;
+}
+
 function renderList(){
   if(!currentUser) return;
-  const list = filteredMembers();
   const wrap = document.getElementById("listWrap");
+
+  if(currentTab === "similar"){
+    const q = document.getElementById("searchBox").value.trim();
+    let groups = similarGroups;
+    if(q) groups = groups.map(g => g.filter(m => m.name.includes(q))).filter(g => g.length > 1);
+    if(!groups.length){
+      wrap.innerHTML = '<div class="empty-list">لا توجد أسماء متشابهة فى الوقت الحالي</div>';
+      return;
+    }
+    wrap.innerHTML = groups.map((g, gi) => `
+      <div class="similar-group">
+        <div class="similar-group-title">مجموعة تشابه ${gi + 1} — ${g.length} أسماء متقاربة</div>
+        ${g.map(memberRowHtml).join("")}
+      </div>`).join("");
+    return;
+  }
+
+  const list = filteredMembers();
   if(!list.length){
     wrap.innerHTML = '<div class="empty-list">لا يوجد أعضاء فى هذه القائمة</div>';
     return;
@@ -806,25 +900,7 @@ function renderList(){
     </div>`).join("");
     return;
   }
-  wrap.innerHTML = list.map(m => {
-    const counts = computeStatusFromVotes(m.votes).counts;
-    const mine = m.votes[currentUser.key];
-    const statusClass = m.status || "none";
-    return `
-    <div class="member-row ${mine ? '' : 'not-voted'}">
-      <span class="m-idx">${m.idx}</span>
-      <span class="m-name">${escapeHtml(m.name)}</span>
-      <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
-      <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure} · س:${counts.travel}</span>
-      <span class="m-actions">
-        <span class="vote-wrap"><span class="vote-count">${counts.with}</span><button class="vote-btn with ${mine==='with'?'mine':''}" onclick="castVote('${m.id}','with')">معانا 100%</button></span>
-        <span class="vote-wrap"><span class="vote-count">${counts.against}</span><button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button></span>
-        <span class="vote-wrap"><span class="vote-count">${counts.unsure}</span><button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button></span>
-        <span class="vote-wrap"><span class="vote-count">${counts.travel}</span><button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button></span>
-        <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
-      </span>
-    </div>`;
-  }).join("");
+  wrap.innerHTML = list.map(memberRowHtml).join("");
 }
 
 function escapeHtml(s){
