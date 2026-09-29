@@ -580,38 +580,39 @@ function hungarian(cost, n, m){ // n <= m ، يرجع لكل صف رقم الع�
   for(let j = 1; j <= m; j++) if(p[j]) res[p[j]-1] = j-1;
   return res;
 }
-let _goneCache = { key: "", val: [] };
+let _diffCache = { key: "", val: null };
 const GONE_MAX_COST = 0.45; // أعلى فرق مقبول بين اسمين حتى يُعتبرا نفس الشخص
-function computeGone(l24, l25){
+/* يرجع { gone: أسماء 2024 غير الموجودة فى 2025 , added: أسماء 2025 غير الموجودة فى 2024 } */
+function computeDiff(l24, l25){
   const key = l24.map(m => m.id).join(",") + "|" + l25.map(m => m.id).join(",");
-  if(_goneCache.key === key) return _goneCache.val;
-  let out = [];
-  if(l24.length && !l25.length){
-    out = l24.slice();
-  } else if(l24.length){
+  if(_diffCache.key === key) return _diffCache.val;
+  let gone = l24.slice(), added = l25.slice();
+  if(l24.length && l25.length){
     const A = l24.map(m => diffKey(m.name)), B = l25.map(m => diffKey(m.name));
     const c = (a, b) => levenshtein(a, b) / Math.max(a.length, b.length, 1);
+    const matched24 = new Set(), matched25 = new Set();
     if(A.length <= B.length){
       const cost = A.map(a => B.map(b => c(a, b)));
       const asg = hungarian(cost, A.length, B.length);
-      out = l24.filter((_, i) => asg[i] < 0 || cost[i][asg[i]] > GONE_MAX_COST);
+      asg.forEach((col, r) => { if(col >= 0 && cost[r][col] <= GONE_MAX_COST){ matched24.add(r); matched25.add(col); } });
     } else {
       const cost = B.map(b => A.map(a => c(a, b)));
       const asg = hungarian(cost, B.length, A.length);
-      const ok = new Set();
-      asg.forEach((col, r) => { if(col >= 0 && cost[r][col] <= GONE_MAX_COST) ok.add(col); });
-      out = l24.filter((_, i) => !ok.has(i));
+      asg.forEach((col, r) => { if(col >= 0 && cost[r][col] <= GONE_MAX_COST){ matched25.add(r); matched24.add(col); } });
     }
+    gone = l24.filter((_, i) => !matched24.has(i));
+    added = l25.filter((_, i) => !matched25.has(i));
   }
-  _goneCache = { key: key, val: out };
-  return out;
+  _diffCache = { key: key, val: { gone: gone, added: added } };
+  return _diffCache.val;
 }
 
 function applyView(){
-  diffNew = [];
-  diffGone = computeGone(allByYear["2024"], allByYear["2025"]); // أسماء 2024 غير الموجودة فى 2025
+  const df = computeDiff(allByYear["2024"], allByYear["2025"]);
+  diffNew = df.added;   // جدد فى 2025 — غير موجودين فى 2024
+  diffGone = df.gone;   // كانوا فى 2024 — غير موجودين فى 2025
   if(currentYear === "diff"){
-    members = diffGone;
+    members = diffNew.concat(diffGone);
     deletedMembers = [];
     similarGroups = [];
   } else {
@@ -920,7 +921,7 @@ function renderStats(){
   document.getElementById("statTotalLbl").textContent = "إجمالي " + yearLabel();
   document.getElementById("cY2024").textContent = allByYear["2024"].length;
   document.getElementById("cY2025").textContent = allByYear["2025"].length;
-  document.getElementById("cYdiff").textContent = diffGone.length;
+  document.getElementById("cYdiff").textContent = diffNew.length + diffGone.length;
   document.getElementById("cPaid").textContent = members.filter(m => m.paid === true).length;
   document.getElementById("cUnpaid").textContent = members.filter(m => m.paid === false).length;
   document.getElementById("cAll").textContent = total;
@@ -1012,7 +1013,8 @@ function renderList(){
   if(currentYear === "diff" && currentTab !== "deleted" && currentTab !== "similar"){
     const l = filteredMembers();
     const secs = [
-      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", l]
+      ["جدد فى 2025 — غير موجودين فى قائمة 2024", l.filter(m => m.year === "2025")],
+      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", l.filter(m => m.year === "2024")]
     ];
     wrap.innerHTML = secs.map(([t, arr]) => `
       <div class="similar-group">
