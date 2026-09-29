@@ -3,10 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#123c34">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>أعضاء الجمعية العمومية - مركز شباب الأحمدية</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -32,18 +37,24 @@
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
 body{
   font-family:'Cairo',sans-serif;
   background:var(--bg);
   color:var(--ink);
-  min-height:100vh;
+  min-height:100vh;min-height:100dvh;
   padding-top:env(safe-area-inset-top,0px);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
 }
+button,select,input{touch-action:manipulation;}
+button:focus-visible,select:focus-visible,input:focus-visible,[role=button]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+button:disabled{opacity:.6;cursor:wait;}
 .hidden{display:none !important;}
 
 /* ---------- Login ---------- */
 #loginScreen{
-  min-height:100vh;
+  min-height:100vh;min-height:100dvh;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -88,7 +99,7 @@ select:focus,input:focus{outline:2px solid var(--primary-light);outline-offset:1
 }
 
 /* ---------- App shell ---------- */
-#app{min-height:100vh;}
+#app{min-height:100vh;min-height:100dvh;}
 header.topbar{
   background:var(--primary);color:#fff;
   padding:16px 24px;display:flex;align-items:center;justify-content:space-between;
@@ -134,7 +145,11 @@ main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
   box-shadow:var(--shadow);margin-bottom:22px;
 }
-.panel h2{font-size:15px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line);font-weight:800;color:var(--primary);}
+.panel h2{font-size:15px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line);font-weight:800;color:var(--primary);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.panel h2 .chev{font-size:14px;transition:transform .2s ease;}
+.panel.collapsed h2{border-bottom:none;}
+.panel.collapsed h2 .chev{transform:rotate(90deg);}
+.panel.collapsed #logList{display:none;}
 #logList{max-height:220px;overflow-y:auto;}
 .log-item{
   padding:10px 18px;border-bottom:1px solid #f0eee7;font-size:13px;color:var(--ink);
@@ -156,9 +171,11 @@ main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
 
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
 .toolbar input[type=text]{max-width:280px;margin-bottom:0;}
+.toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.hide-sm{display:inline;}
 .btn-print{
   background:var(--surface);border:1px solid var(--primary);color:var(--primary);
-  padding:9px 16px;border-radius:8px;font-weight:700;font-size:13px;
+  padding:9px 16px;border-radius:8px;font-weight:700;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;
 }
 .btn-print:hover{background:var(--primary);color:#fff;}
 
@@ -216,7 +233,7 @@ footer.sig b{color:var(--primary);}
 
 .modal-overlay{
   position:fixed;inset:0;background:rgba(18,24,20,0.45);
-  display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+  display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;
 }
 .modal-card{
   background:var(--surface);border-radius:var(--radius);padding:26px;width:100%;max-width:380px;
@@ -260,28 +277,100 @@ footer.sig b{color:var(--primary);}
 }
 .bn-add svg{width:24px;height:24px;stroke:var(--primary);stroke-width:2.6;fill:none;stroke-linecap:round;}
 
+@media(max-width:820px){
+  .stat-total{grid-column:1 / -1;}
+}
 @media(max-width:720px){
-  .bottom-nav{display:flex;}
-  main{padding-bottom:96px;}
-  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
-  .tabs::-webkit-scrollbar{height:0;}
-  .tab-btn{flex:none;}
-  header.topbar{padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;}
-  main{padding-left:14px;padding-right:14px;}
-  .toolbar{flex-direction:column;align-items:stretch;}
-  .toolbar > div{display:flex;gap:8px;}
-  .toolbar .btn-print{flex:1;}
-  .toolbar input[type=text]{max-width:100%;}
-  .member-row{flex-direction:column;align-items:stretch;gap:8px;}
-  .m-idx{width:auto;}
-  .m-status,.m-votes{align-self:flex-start;}
-  .m-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;}
-  .m-actions .vote-wrap{width:100%;}
-  .m-actions .vote-wrap .vote-btn{width:100%;padding:9px 8px;}
-  .m-actions .vote-btn.danger{grid-column:1 / -1;width:100%;padding:9px 8px;}
+  .bottom-nav{display:flex;padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right));}
+  main{padding:14px max(12px,env(safe-area-inset-right)) 104px max(12px,env(safe-area-inset-left));}
+  header.topbar{padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left));gap:8px;}
+  header.topbar .title{flex:1 1 100%;}
+  header.topbar .title h1{font-size:16px;}
+  header.topbar .title p{font-size:12px;}
+  .who{width:100%;justify-content:space-between;gap:8px;font-size:12.5px;}
+  .who-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hello-txt{display:none;}
+  .btn-ghost{padding:7px 12px;font-size:12.5px;min-height:36px;}
+  .conn-badge{font-size:11px;padding:4px 9px;}
+
+  /* year switch: one segmented row */
+  .year-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+  .year-btn{flex:none;padding:9px 4px;font-size:13px;border-width:1.5px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25;min-height:54px;justify-content:center;}
+  .year-btn .count{margin:0;font-size:12px;}
+  .hide-sm{display:none;}
+
+  /* stats */
+  .stats{gap:8px;margin-bottom:14px;}
+  .stat-card{padding:12px 12px 11px;}
+  .stat-card .num{font-size:24px;}
+  .stat-card .lbl{font-size:12px;margin-top:5px;line-height:1.35;}
+  .stat-card .pct{font-size:11.5px;margin-inline-start:2px;}
+  .bar-track{margin-top:7px;height:5px;}
+  .stat-total{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .stat-total .lbl{margin-top:0;font-size:13px;}
+
+  .panel{margin-bottom:14px;}
+  .panel h2{padding:13px 14px;font-size:14px;}
+  #logList{max-height:180px;}
+  .log-item{padding:9px 14px;flex-direction:column;gap:2px;}
+
+  /* tabs */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;margin-inline:-12px;padding-inline:12px;scroll-snap-type:x proximity;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{flex:none;padding:9px 14px;min-height:40px;scroll-snap-align:center;white-space:nowrap;}
+
+  /* toolbar */
+  .toolbar{flex-direction:column;align-items:stretch;gap:8px;}
+  .toolbar input[type=text]{max-width:100%;padding:12px 14px;}
+  .toolbar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .btn-add-desktop{display:none;}
+  .toolbar .btn-print{min-height:42px;}
+  .pending-banner{font-size:12.5px;padding:10px 12px;}
+
+  /* member card */
+  .list-wrap{border-radius:12px;}
+  .member-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px 8px;align-items:center;padding:12px 12px 13px;}
+  .m-idx{grid-column:1;width:auto;text-align:center;font-size:12px;}
+  .m-name{grid-column:2;min-width:0;flex:none;font-size:15px;line-height:1.45;word-break:break-word;}
+  .m-status{grid-column:3;justify-self:end;align-self:center;}
+  .m-votes{display:none;}
+  .m-actions{grid-column:1 / -1;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;}
+  .m-actions .vote-wrap{width:100%;flex-direction:row-reverse;gap:6px;align-items:stretch;}
+  .m-actions .vote-wrap .vote-btn{flex:1;width:auto;min-height:44px;padding:8px 6px;font-size:12.5px;}
+  .m-actions .vote-count{align-self:center;min-width:20px;font-size:12px;}
+  .m-actions .vote-btn.danger{grid-column:1 / -1;width:100%;min-height:40px;padding:8px;}
+  .pay-row{grid-column:1 / -1;flex:none;}
+  .pay-btn{min-height:44px;font-size:13px;}
+  .similar-group-title{padding:10px 12px;}
+  footer.sig{padding:20px 0 6px;}
+
+  /* modal as bottom sheet */
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .modal-card{max-width:none;border-radius:16px 16px 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom,0px));}
+  .modal-actions{gap:10px;}
+  .modal-actions .btn,.modal-actions .btn-ghost-dark{flex:1;min-height:46px;width:auto !important;}
+
+  /* iOS: 16px inputs stop auto-zoom on focus */
+  select,input[type=password],input[type=text]{font-size:16px;}
+  .login-card{padding:28px 20px;}
+  .btn{min-height:46px;}
 }
 @media(max-width:400px){
-  .stat-card .num{font-size:23px;}
+  .stat-card .num{font-size:22px;}
+  .tab-btn{padding:8px 12px;font-size:13px;}
+  .m-actions .vote-wrap .vote-btn{font-size:12px;}
+  .year-btn{font-size:12.5px;}
+}
+@media(hover:none){
+  .vote-btn.with:hover:not(.mine){background:#fcfbf8;color:var(--with);}
+  .vote-btn.against:hover:not(.mine){background:#fcfbf8;color:var(--against);}
+  .vote-btn.unsure:hover:not(.mine){background:#fcfbf8;color:var(--unsure);}
+  .vote-btn.travel:hover:not(.mine){background:#fcfbf8;color:var(--travel);}
+  .vote-btn.danger:hover{background:#fcfbf8;color:var(--against);opacity:.75;}
+  .btn-print:hover{background:var(--surface);color:var(--primary);}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important;}
 }
 
 /* year switch */
@@ -330,7 +419,7 @@ footer.sig b{color:var(--primary);}
       <option value="">-- اختر --</option>
     </select>
     <label for="adminPass">كلمة السر</label>
-    <input type="password" id="adminPass" placeholder="ادخل كلمة السر">
+    <input type="password" id="adminPass" placeholder="ادخل كلمة السر" autocomplete="current-password" enterkeyhint="go">
     <button class="btn btn-primary" onclick="doLogin()">دخول</button>
   </div>
 </div>
@@ -344,16 +433,16 @@ footer.sig b{color:var(--primary);}
     </div>
     <div class="who">
       <span class="conn-badge" id="connBadge"><i class="conn-dot"></i><span id="connText">جارٍ الاتصال...</span></span>
-      <span>مرحباً، <span class="name" id="currentUserName"></span></span>
+      <span class="who-name"><span class="hello-txt">مرحباً، </span><span class="name" id="currentUserName"></span></span>
       <button class="btn-ghost" onclick="doLogout()">تسجيل الخروج</button>
     </div>
   </header>
 
   <main>
     <div class="year-switch">
-      <button class="year-btn" data-year="2024" onclick="setYear('2024')">أعضاء 2024 <span class="count" id="cY2024">0</span></button>
-      <button class="year-btn active" data-year="2025" onclick="setYear('2025')">أعضاء 2025 <span class="count" id="cY2025">0</span></button>
-      <button class="year-btn" data-year="diff" onclick="setYear('diff')">الفرق بين 2024 و 2025 <span class="count" id="cYdiff">0</span></button>
+      <button class="year-btn" data-year="2024" onclick="setYear('2024')"><span class="yl">أعضاء 2024</span> <span class="count" id="cY2024">0</span></button>
+      <button class="year-btn active" data-year="2025" onclick="setYear('2025')"><span class="yl">أعضاء 2025</span> <span class="count" id="cY2025">0</span></button>
+      <button class="year-btn" data-year="diff" onclick="setYear('diff')"><span class="yl">الفرق<span class="hide-sm"> بين 2024 و 2025</span></span> <span class="count" id="cYdiff">0</span></button>
     </div>
 
     <!-- Stats -->
@@ -385,8 +474,8 @@ footer.sig b{color:var(--primary);}
     </div>
 
     <!-- Activity log -->
-    <div class="panel">
-      <h2>سجل العمليات</h2>
+    <div class="panel" id="logPanel">
+      <h2 onclick="toggleLog()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleLog();}"><span>سجل العمليات</span><span class="chev" aria-hidden="true">▾</span></h2>
       <div id="logList"><div class="log-empty">لا توجد عمليات بعد</div></div>
     </div>
 
@@ -408,9 +497,9 @@ footer.sig b{color:var(--primary);}
     <div class="pending-banner" id="pendingBanner"></div>
 
     <div class="toolbar">
-      <input type="text" id="searchBox" placeholder="بحث بالاسم..." oninput="renderList()">
-      <div style="display:flex;gap:8px;">
-        <button class="btn-print" onclick="openAddModal()">+ إضافة عضو جديد</button>
+      <input type="text" id="searchBox" placeholder="بحث بالاسم..." oninput="renderList()" enterkeyhint="search" autocomplete="off">
+      <div class="toolbar-actions">
+        <button class="btn-print btn-add-desktop" onclick="openAddModal()">+ إضافة عضو جديد</button>
         <button class="btn-print" onclick="printCurrentList()">طباعة القائمة</button>
         <button class="btn-print" id="pdfBtn" onclick="exportCurrentPdf()">تصدير PDF</button>
       </div>
@@ -451,7 +540,7 @@ footer.sig b{color:var(--primary);}
     <h3>إضافة عضو جديد للجمعية</h3>
 
     <label for="addMemberInput">اسم العضو</label>
-    <input type="text" id="addMemberInput" placeholder="اكتب اسم العضو بالكامل">
+    <input type="text" id="addMemberInput" placeholder="اكتب اسم العضو بالكامل" autocomplete="off" enterkeyhint="done">
     <div class="modal-actions">
       <button class="btn-ghost-dark" onclick="closeAddModal()">إلغاء</button>
       <button class="btn btn-primary" style="width:auto;" onclick="confirmAddMember()">إضافة</button>
@@ -962,8 +1051,11 @@ function setTab(tab){
   currentTab = tab;
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll(".bn-item").forEach(b => b.classList.toggle("active", b.dataset.nav === tab));
+  const act = document.querySelector(".tab-btn.active");
+  if(act && act.scrollIntoView){ try{ act.scrollIntoView({ block: "nearest", inline: "center" }); }catch(e){} }
   renderList();
 }
+function toggleLog(){ document.getElementById("logPanel").classList.toggle("collapsed"); }
 function bottomNavGo(tab){
   setTab(tab);
   document.querySelector(".list-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1088,39 +1180,95 @@ function printCurrentList(){
   window.print();
 }
 
-function exportCurrentPdf(){
-  if(typeof html2pdf === "undefined"){ alert("مكتبة PDF لم تُحمَّل بعد، تأكد من الاتصال بالإنترنت وحاول مرة أخرى"); return; }
+async function exportCurrentPdf(){
+  if(typeof html2canvas === "undefined" || !(window.jspdf && window.jspdf.jsPDF)){
+    alert("مكتبة PDF لم تُحمَّل بعد، تأكد من الاتصال بالإنترنت وحاول مرة أخرى");
+    return;
+  }
   const list = filteredMembers();
   if(!list.length){ alert("لا يوجد أعضاء فى هذه القائمة لتصديرها"); return; }
+
   const title = (TAB_TITLES[currentTab] || "قائمة الأعضاء") + " — " + yearLabel();
-  const sub = "مركز شباب الأحمدية — العدد: " + list.length + " — التاريخ: " + new Date().toLocaleDateString("ar-EG");
-  const box = document.createElement("div");
-  box.setAttribute("dir", "rtl");
-  box.style.cssText = "width:730px;padding:10px 14px;background:#fff;color:#000;font-family:'Cairo',sans-serif;direction:rtl;";
-  const cell = "border:1px solid #999;padding:6px 8px;text-align:right;font-size:12px;";
-  box.innerHTML =
-    `<h2 style="text-align:center;margin:0 0 4px;font-size:18px;">${escapeHtml(title)}</h2>` +
-    `<p style="text-align:center;color:#333;font-size:12px;margin:0 0 14px;">${escapeHtml(sub)}</p>` +
-    `<table style="width:100%;border-collapse:collapse;direction:rtl;">` +
-    `<thead><tr><th style="${cell}background:#eee;width:36px;">م</th><th style="${cell}background:#eee;">الاسم</th><th style="${cell}background:#eee;width:90px;">الحالة</th><th style="${cell}background:#eee;width:90px;">الدفع</th></tr></thead><tbody>` +
-    list.map((m, i) => `<tr style="page-break-inside:avoid;"><td style="${cell}">${i+1}</td><td style="${cell}">${escapeHtml(m.name)}</td><td style="${cell}">${escapeHtml(choiceLabel(m.status))}</td><td style="${cell}">${m.paid === true ? "مدفوع له" : m.paid === false ? "غير مدفوع له" : "-"}</td></tr>`).join("") +
-    `</tbody></table>` +
-    `<p style="margin-top:16px;text-align:center;font-size:11px;color:#333;">مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</p>`;
+  const dateStr = new Date().toLocaleDateString("ar-EG");
+  const sub = "مركز شباب الأحمدية — العدد: " + list.length + " — التاريخ: " + dateStr;
+
+  // عناصر الجدول (فى تبويب الفرق: عنوان لكل قسم)
+  const items = [];
+  if(currentYear === "diff" && currentTab !== "deleted" && currentTab !== "similar"){
+    [
+      ["جدد فى 2025 — غير موجودين فى قائمة 2024", list.filter(m => m.year === "2025")],
+      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", list.filter(m => m.year === "2024")]
+    ].forEach(([t, arr]) => {
+      items.push({ sec: t + " (" + arr.length + ")" });
+      if(!arr.length) items.push({ empty: true });
+      arr.forEach((m, i) => items.push({ m: m, n: i + 1 }));
+    });
+  } else {
+    list.forEach((m, i) => items.push({ m: m, n: i + 1 }));
+  }
+
+  // تقسيم الصفحات: صفحة A4 = 794×1123 بكسل، الصف 28 بكسل
+  const FIRST = 24, REST = 33;
+  const pages = [];
+  for(let k = 0, cap = FIRST; k < items.length; ){
+    pages.push(items.slice(k, k + cap)); k += cap; cap = REST;
+  }
+
+  const cell = "border:1px solid #999;padding:0 8px;height:28px;text-align:right;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;";
+  const th = "border:1px solid #999;background:#eee;padding:0 8px;height:28px;text-align:right;font-size:12px;font-weight:800;";
+  const rowHtml = it => {
+    if(it.sec) return `<tr><td colspan="4" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
+    if(it.empty) return `<tr><td colspan="4" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
+    const m = it.m;
+    return `<tr><td style="${cell}">${it.n}</td><td style="${cell}">${escapeHtml(m.name)}</td><td style="${cell}">${escapeHtml(choiceLabel(m.status))}</td><td style="${cell}">${m.paid === true ? "مدفوع له" : m.paid === false ? "غير مدفوع له" : "-"}</td></tr>`;
+  };
+  const pageHtml = (rows, pi) => `
+    <div dir="rtl" style="position:relative;width:794px;height:1123px;background:#fff;color:#000;font-family:'Cairo',sans-serif;direction:rtl;padding:36px 40px;box-sizing:border-box;overflow:hidden;">
+      ${pi === 0 ? `<h2 style="text-align:center;margin:0 0 4px;font-size:19px;line-height:1.5;">${escapeHtml(title)}</h2><p style="text-align:center;color:#333;font-size:12px;margin:0 0 14px;line-height:1.5;">${escapeHtml(sub)}</p>` : ""}
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;">
+        <colgroup><col style="width:44px"><col><col style="width:110px"><col style="width:110px"></colgroup>
+        <thead><tr><th style="${th}">م</th><th style="${th}">الاسم</th><th style="${th}">الحالة</th><th style="${th}">الدفع</th></tr></thead>
+        <tbody>${rows.map(rowHtml).join("")}</tbody>
+      </table>
+      <div style="position:absolute;left:40px;right:40px;bottom:20px;display:flex;justify-content:space-between;font-size:11px;color:#444;">
+        <span>مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</span>
+        <span>صفحة ${pi + 1} من ${pages.length}</span>
+      </div>
+    </div>`;
+
   const btn = document.getElementById("pdfBtn");
-  const old = btn.textContent; btn.textContent = "جارٍ التصدير..."; btn.disabled = true;
-  const done = () => { btn.textContent = old; btn.disabled = false; };
-  const go = () => html2pdf().set({
-    margin: [10, 8, 10, 8],
-    filename: title.replace(/[\\/:*?"<>|]/g, "-") + ".pdf",
-    image: { type: "jpeg", quality: 0.95 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    pagebreak: { mode: ["css"], avoid: "tr" }
-  }).from(box).save().then(done).catch(e => { done(); alert("تعذر إنشاء ملف PDF"); });
-  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go);
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  const stage = document.createElement("div");
+  stage.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;pointer-events:none;";
+  document.body.appendChild(stage);
+  try{
+    if(document.fonts && document.fonts.load){ try{ await document.fonts.load("700 12px Cairo"); await document.fonts.ready; }catch(e){} }
+    const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+    for(let pi = 0; pi < pages.length; pi++){
+      btn.textContent = "جارٍ التصدير " + (pi + 1) + "/" + pages.length;
+      stage.innerHTML = pageHtml(pages[pi], pi);
+      const canvas = await html2canvas(stage.firstElementChild, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+      if(pi > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
+      canvas.width = canvas.height = 0; // تحرير الذاكرة على الهاتف
+      await new Promise(r => setTimeout(r, 0));
+    }
+    pdf.save(title.replace(/[\\/:*?"<>|]/g, "-") + ".pdf");
+  }catch(e){
+    console.error(e);
+    alert("تعذر إنشاء ملف PDF، حاول مرة أخرى");
+  }finally{
+    stage.remove();
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
 }
 
 /* ================= Boot ================= */
+if(window.matchMedia && window.matchMedia("(max-width:720px)").matches){
+  document.getElementById("logPanel").classList.add("collapsed");
+}
 initLoginSelect();
 attachListeners();
 
