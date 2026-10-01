@@ -339,8 +339,6 @@ footer.sig b{color:var(--primary);}
   .m-actions .vote-wrap .vote-btn{flex:1;width:auto;min-height:44px;padding:8px 6px;font-size:12.5px;}
   .m-actions .vote-count{align-self:center;min-width:20px;font-size:12px;}
   .m-actions .vote-btn.danger{grid-column:1 / -1;width:100%;min-height:40px;padding:8px;}
-  .pay-row{grid-column:1 / -1;flex:none;}
-  .pay-btn{min-height:44px;font-size:13px;}
   .similar-group-title{padding:10px 12px;}
   footer.sig{padding:20px 0 6px;}
 
@@ -380,13 +378,6 @@ footer.sig b{color:var(--primary);}
 .year-btn .count{opacity:.8;font-weight:600;margin-inline-start:6px;font-size:13px;}
 .similar-group{border-bottom:8px solid var(--bg);}
 .similar-group-title{padding:10px 16px;background:#f0eee7;font-weight:800;font-size:13.5px;color:var(--primary);}
-/* payment */
-.pay-row{flex:0 0 100%;display:flex;gap:8px;padding-top:8px;border-top:1px dashed var(--line);}
-.pay-btn{flex:1;border:2px solid var(--line);background:#fcfbf8;color:var(--muted);padding:8px 10px;border-radius:8px;font-family:'Cairo',sans-serif;font-weight:800;font-size:13px;cursor:pointer;}
-.pay-btn.paid:hover{border-color:var(--with);color:var(--with);}
-.pay-btn.unpaid:hover{border-color:var(--against);color:var(--against);}
-.pay-btn.paid.on{background:var(--with);border-color:var(--with);color:#fff;}
-.pay-btn.unpaid.on{background:var(--against);border-color:var(--against);color:#fff;}
 
 /* Print */
 #printArea{display:none;}
@@ -493,8 +484,6 @@ footer.sig b{color:var(--primary);}
       <button class="tab-btn" data-tab="unsure" onclick="setTab('unsure')">مشكوك فيهم <span class="count" id="cUnsure">0</span></button>
       <button class="tab-btn" data-tab="travel" onclick="setTab('travel')">مسافرون <span class="count" id="cTravel">0</span></button>
       <button class="tab-btn" data-tab="none" onclick="setTab('none')">لم يُصنّف <span class="count" id="cNone">0</span></button>
-      <button class="tab-btn" data-tab="paid" onclick="setTab('paid')">مدفوع لهم <span class="count" id="cPaid">0</span></button>
-      <button class="tab-btn" data-tab="unpaid" onclick="setTab('unpaid')">غير مدفوع لهم <span class="count" id="cUnpaid">0</span></button>
       <button class="tab-btn" data-tab="pending" onclick="setTab('pending')">لم أصوّت عليهم بعد <span class="count" id="cPending">0</span></button>
       <button class="tab-btn" data-tab="deleted" onclick="setTab('deleted')">المحذوفون <span class="count" id="cDeleted">0</span></button>
       <button class="tab-btn" data-tab="similar" onclick="setTab('similar')">أسماء متشابهة <span class="count" id="cSimilar">0</span></button>
@@ -561,7 +550,7 @@ footer.sig b{color:var(--primary);}
   <h2 id="printTitle"></h2>
   <p class="p-sub" id="printSub"></p>
   <table>
-    <thead><tr><th>م</th><th>رقم العضوية</th><th>الاسم</th><th>الحالة</th><th>الدفع</th></tr></thead>
+    <thead><tr><th>م</th><th>رقم العضوية</th><th>الاسم</th><th>الحالة</th></tr></thead>
     <tbody id="printBody"></tbody>
   </table>
   <p class="p-footer">مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</p>
@@ -603,7 +592,6 @@ const ROSTER = [["عباس عباس يوسف مصطفى","1",0],["الشحات �
 const MEMBER_NAMES = [], MEMBER_IDS = [], NAMES_2025 = [];
 let baseMembers = ROSTER.map((r, i) => ({ id: "m26_" + i, name: r[0], year: "2025", no: r[1], crossed: r[2] === 1 }));
 let memberNoRaw = {};   // id -> رقم العضوية بعد التعديل (يُحفظ فى Firebase)
-let paymentsRaw = {};   // id -> {paid:true/false, by, at}
 let currentYear = "2025"; // "2024" | "2025" | "diff"
 let allByYear = { "2024": [], "2025": [] }, delByYear = { "2024": [], "2025": [] };
 let diffNew = [], diffGone = [];
@@ -626,7 +614,6 @@ function rebuildMembers(){
   const seq = { "2024": 0, "2025": 0 };
   all.forEach(base => {
     const d = membersDataRaw[base.id] || {};
-    const p = paymentsRaw[base.id];
     const m = {
       id: base.id, name: base.name, year: base.year,
       no: Object.prototype.hasOwnProperty.call(memberNoRaw, base.id) ? String(memberNoRaw[base.id] || "") : String(base.no || ""),
@@ -635,10 +622,8 @@ function rebuildMembers(){
       status: d.status || null,
       manual: !!d.manual,
       updatedBy: d.updatedBy || null,
-      updatedAt: d.updatedAt || null,
-      paid: p ? p.paid === true : null   // true = مدفوع له | false = غير مدفوع له | null = لم يحدد
+      updatedAt: d.updatedAt || null
     };
-    if(p && typeof p.paid === "boolean") m.paid = p.paid;
     membersById[m.id] = m;
     if(deletedRaw[m.id]){
       delByYear[m.year].push(m);
@@ -730,12 +715,6 @@ function setYear(y){
 
 function yearLabel(){ return "أعضاء الجمعية"; }
 
-function setPaid(memberId, paid){
-  const m = membersById[memberId];
-  if(!m || m.paid === paid) return;
-  db.ref(ROOT + "payments/" + memberId).set({ paid: paid, by: currentUser.name, at: Date.now() });
-  addLog(`${currentUser.name} سجّل \"${m.name}\" (${m.year}) كـ \"${paid ? "مدفوع له" : "غير مدفوع له"}\"`);
-}
 
 /* ---- الأسماء المتشابهة ---- */
 function normalizeArabicName(s){
@@ -879,12 +858,6 @@ function attachListeners(){
     renderList();
   });
 
-  db.ref(ROOT + "payments").on("value", snap => {
-    paymentsRaw = snap.val() || {};
-    rebuildMembers();
-    renderStats();
-    renderList();
-  });
 
   db.ref(ROOT + "deleted").on("value", snap => {
     deletedRaw = snap.val() || {};
@@ -912,24 +885,36 @@ function computeStatusFromVotes(votes){
 
 function castVote(memberId, choice){
   const m = membersById[memberId];
+  if(!m || !currentUser) return;
+  const uid = currentUser.key;
   const ref = db.ref(ROOT + "members/" + memberId);
-  const newVotes = Object.assign({}, m.votes, { [currentUser.key]: choice });
-  const { winner } = computeStatusFromVotes(newVotes);
-  const newStatus = winner || m.status; // إذا لم تصل لأي عتبة بعد، تبقى الحالة كما هي
+  let prevStatus = null, finalStatus = null;
 
-  const update = {
-    votes: newVotes,
-    status: newStatus,
-    manual: false
-  };
-  if(newStatus && newStatus !== m.status){
-    update.updatedBy = currentUser.name;
-    update.updatedAt = Date.now();
-  }
-  ref.update(update);
-
-  addLog(`${currentUser.name} قام بالتصويت على "${m.name}" بـ (${choiceLabel(choice)})` +
-         (newStatus && newStatus !== m.status ? ` — وأصبحت حالته "${choiceLabel(newStatus)}" تلقائياً` : ""));
+  /* transaction: تقرأ أحدث نسخة من السيرفر وتضيف صوت هذا المستخدم فقط
+     فلا يمكن أن تمسح تصويت مستخدم آخر حتى لو صوّت الجميع فى نفس اللحظة */
+  ref.transaction(cur => {
+    cur = cur || {};
+    const votes = Object.assign({}, cur.votes || {});
+    votes[uid] = choice;
+    const { winner } = computeStatusFromVotes(votes);
+    prevStatus = cur.status || null;
+    finalStatus = winner || cur.status || null;
+    const out = Object.assign({}, cur, { votes: votes, manual: false });
+    if(finalStatus) out.status = finalStatus;
+    if(finalStatus && finalStatus !== prevStatus){
+      out.updatedBy = currentUser.name;
+      out.updatedAt = Date.now();
+    }
+    return out;
+  }, (err, committed) => {
+    if(err || !committed){
+      console.error("vote failed", err);
+      alert("تعذّر حفظ اختيارك، حاول مرة أخرى");
+      return;
+    }
+    addLog(`${currentUser.name} قام بالتصويت على "${m.name}" بـ (${choiceLabel(choice)})` +
+           (finalStatus && finalStatus !== prevStatus ? ` — وأصبحت حالته "${choiceLabel(finalStatus)}" تلقائياً` : ""));
+  }, true);
 }
 
 function manualSetStatus(memberId, status){
@@ -1051,8 +1036,6 @@ function renderStats(){
   document.getElementById("cY2024").textContent = allByYear["2024"].length;
   document.getElementById("cY2025").textContent = allByYear["2025"].length;
   document.getElementById("cYdiff").textContent = diffNew.length + diffGone.length;
-  document.getElementById("cPaid").textContent = members.filter(m => m.paid === true).length;
-  document.getElementById("cUnpaid").textContent = members.filter(m => m.paid === false).length;
   document.getElementById("cAll").textContent = total;
   document.getElementById("cWith").textContent = withC;
   document.getElementById("cAgainst").textContent = againstC;
@@ -1105,11 +1088,9 @@ function filteredMembers(){
   const q = document.getElementById("searchBox").value.trim();
   let list = currentTab === "deleted" ? deletedMembers : members;
   if(currentTab === "none") list = list.filter(m => !m.status);
-  else if(currentTab === "paid") list = list.filter(m => m.paid === true);
-  else if(currentTab === "unpaid") list = list.filter(m => m.paid === false);
   else if(currentTab === "pending") list = list.filter(m => !m.votes[currentUser.key]);
   else if(currentTab === "similar") list = similarGroups.flat();
-  else if(currentTab !== "all" && currentTab !== "deleted" && currentTab !== "paid" && currentTab !== "unpaid") list = list.filter(m => m.status === currentTab);
+  else if(currentTab !== "all" && currentTab !== "deleted") list = list.filter(m => m.status === currentTab);
   if(q){ const qn = toEnDigits(q); list = list.filter(m => m.name.includes(q) || (m.no && m.no === qn)); }
   return list;
 }
@@ -1136,10 +1117,6 @@ function memberRowHtml(m){
         <span class="vote-wrap"><span class="vote-count">${counts.travel}</span><button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button></span>
         <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
       </span>
-      <div class="pay-row">
-        <button class="pay-btn paid ${m.paid===true?'on':''}" onclick="setPaid('${m.id}',true)">✓ مدفوع له</button>
-        <button class="pay-btn unpaid ${m.paid===false?'on':''}" onclick="setPaid('${m.id}',false)">✕ غير مدفوع له</button>
-      </div>
     </div>`;
 }
 
@@ -1210,8 +1187,6 @@ const TAB_TITLES = {
   none: "قائمة الأعضاء غير المصنفين",
   pending: "الأعضاء الذين لم يصوّت عليهم",
   deleted: "قائمة الأعضاء المحذوفين",
-  paid: "قائمة المدفوع لهم",
-  unpaid: "قائمة غير المدفوع لهم",
   similar: "الأسماء المتشابهة"
 };
 function printCurrentList(){
@@ -1220,7 +1195,7 @@ function printCurrentList(){
   document.getElementById("printSub").textContent =
     "مركز شباب الأحمدية — العدد: " + list.length + " — تاريخ الطباعة: " + new Date().toLocaleDateString("ar-EG");
   document.getElementById("printBody").innerHTML = list.map((m, i) => `
-    <tr><td>${i+1}</td><td>${escapeHtml(m.no || "-")}</td><td>${escapeHtml(m.name)}</td><td>${choiceLabel(m.status)}</td><td>${m.paid === true ? 'مدفوع له' : m.paid === false ? 'غير مدفوع له' : '-'}</td></tr>
+    <tr><td>${i+1}</td><td>${escapeHtml(m.no || "-")}</td><td>${escapeHtml(m.name)}</td><td>${choiceLabel(m.status)}</td></tr>
   `).join("");
   window.print();
 }
@@ -1262,17 +1237,17 @@ async function exportCurrentPdf(){
   const cell = "border:1px solid #999;padding:0 8px;height:28px;text-align:right;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;";
   const th = "border:1px solid #999;background:#eee;padding:0 8px;height:28px;text-align:right;font-size:12px;font-weight:800;";
   const rowHtml = it => {
-    if(it.sec) return `<tr><td colspan="5" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
-    if(it.empty) return `<tr><td colspan="5" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
+    if(it.sec) return `<tr><td colspan="4" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
+    if(it.empty) return `<tr><td colspan="4" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
     const m = it.m;
-    return `<tr><td style="${cell}">${it.n}</td><td style="${cell}">${escapeHtml(m.no || "-")}</td><td style="${cell}">${escapeHtml(m.name)}</td><td style="${cell}">${escapeHtml(choiceLabel(m.status))}</td><td style="${cell}">${m.paid === true ? "مدفوع له" : m.paid === false ? "غير مدفوع له" : "-"}</td></tr>`;
+    return `<tr><td style="${cell}">${it.n}</td><td style="${cell}">${escapeHtml(m.no || "-")}</td><td style="${cell}">${escapeHtml(m.name)}</td><td style="${cell}">${escapeHtml(choiceLabel(m.status))}</td></tr>`;
   };
   const pageHtml = (rows, pi) => `
     <div dir="rtl" style="position:relative;width:794px;height:1123px;background:#fff;color:#000;font-family:'Cairo',sans-serif;direction:rtl;padding:36px 40px;box-sizing:border-box;overflow:hidden;">
       ${pi === 0 ? `<h2 style="text-align:center;margin:0 0 4px;font-size:19px;line-height:1.5;">${escapeHtml(title)}</h2><p style="text-align:center;color:#333;font-size:12px;margin:0 0 14px;line-height:1.5;">${escapeHtml(sub)}</p>` : ""}
       <table style="width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;">
-        <colgroup><col style="width:44px"><col style="width:80px"><col><col style="width:110px"><col style="width:110px"></colgroup>
-        <thead><tr><th style="${th}">م</th><th style="${th}">رقم العضوية</th><th style="${th}">الاسم</th><th style="${th}">الحالة</th><th style="${th}">الدفع</th></tr></thead>
+        <colgroup><col style="width:44px"><col style="width:80px"><col><col style="width:140px"></colgroup>
+        <thead><tr><th style="${th}">م</th><th style="${th}">رقم العضوية</th><th style="${th}">الاسم</th><th style="${th}">الحالة</th></tr></thead>
         <tbody>${rows.map(rowHtml).join("")}</tbody>
       </table>
       <div style="position:absolute;left:40px;right:40px;bottom:20px;display:flex;justify-content:space-between;font-size:11px;color:#444;">
