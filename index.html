@@ -416,20 +416,18 @@ footer.sig b{color:var(--primary);}
 
 /* Print */
 #printArea{display:none;}
+#printArea h2{text-align:center;color:#000;margin:0 0 4px;font-size:18px;line-height:1.4;font-family:'Cairo',sans-serif;}
+#printArea .p-sub{text-align:center;color:#333;font-size:12px;line-height:1.4;margin:0 0 10px;font-family:'Cairo',sans-serif;}
+#printArea table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:'Cairo',sans-serif;}
+#printArea .p-footer{margin:10px 0 0;text-align:center;font-size:11px;line-height:1.4;color:#333;font-family:'Cairo',sans-serif;}
+#printArea.measuring{display:block !important;position:absolute;left:-10000px;top:0;width:718px;direction:rtl;background:#fff;}
+@page{size:A4;margin:10mm;}
 @media print{
-  body *{visibility:hidden;}
-  #printArea, #printArea *{visibility:visible;}
-  #printArea{
-    display:block !important;position:absolute;top:0;right:0;left:0;padding:20px;
-  }
-  #printArea h2{text-align:center;color:#000;margin-bottom:4px;}
-  #printArea .p-sub{text-align:center;color:#333;font-size:13px;margin-bottom:18px;}
-  #printArea table{width:100%;border-collapse:collapse;font-size:13px;}
-  #printArea th,#printArea td{border:1px solid #999;padding:7px 10px;text-align:right;}
-  #printArea th{background:#eee;}
+  html,body{background:#fff !important;margin:0 !important;padding:0 !important;min-height:0 !important;}
+  body > *:not(#printArea){display:none !important;}
+  #printArea{display:block !important;position:static;padding:0;width:100%;direction:rtl;}
+  #printArea .p-page:not(:last-child){break-after:page;page-break-after:always;}
   #printArea, #printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  #printArea tr.p-travel td{background:#dbeafe;color:#1d4ed8;font-weight:700;}
-  #printArea .p-footer{margin-top:22px;text-align:center;font-size:12px;color:#333;}
 }
 
 .year-switch{display:none !important;}
@@ -437,6 +435,24 @@ footer.sig b{color:var(--primary);}
 .m-no.empty{background:#f3f3f3;color:#888;font-weight:600;border:1px dashed #bbb;}
 .m-no.dup{background:#fff1d6;color:#8a5a00;}
 .m-no.x{background:#fde4e4;color:#a02020;cursor:default;}
+
+/* ---------- متوفي + صلاحيات المدير ---------- */
+.member-row.is-deceased{background:#ffd9d9 !important;box-shadow:inset 4px 0 0 #f28b8b !important;}
+.m-dead-tag{display:inline-block;margin-inline-start:6px;padding:1px 9px;border-radius:999px;background:#f4a9a9;color:#7a1010;font-size:11.5px;font-weight:800;vertical-align:middle;}
+.admin-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;}
+.vote-btn.dead{border-color:#c0504d;color:#a02a2a;background:#fff3f3;}
+.vote-btn.dead:hover,.vote-btn.dead.mine{background:#d9605c;color:#fff;}
+.vote-btn.clear{border-color:var(--muted);color:var(--muted);}
+.vote-btn.clear:hover{background:var(--muted);color:#fff;}
+.super-badge{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--primary);font-size:10.5px;font-weight:800;}
+@media(max-width:720px){
+  .m-actions .admin-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .admin-row .vote-btn{min-height:44px;width:100%;}
+}
+@media(hover:none){
+  .vote-btn.dead:hover:not(.mine){background:#fff3f3;color:#a02a2a;}
+  .vote-btn.clear:hover{background:#fcfbf8;color:var(--muted);}
+}
 </style>
 </head>
 <body>
@@ -524,6 +540,7 @@ footer.sig b{color:var(--primary);}
       <button class="tab-btn" data-tab="pending" onclick="setTab('pending')">لم أصوّت عليهم بعد <span class="count" id="cPending">0</span></button>
       <button class="tab-btn" data-tab="deleted" onclick="setTab('deleted')">المحذوفون <span class="count" id="cDeleted">0</span></button>
       <button class="tab-btn" data-tab="similar" onclick="setTab('similar')">أسماء متشابهة <span class="count" id="cSimilar">0</span></button>
+      <button class="tab-btn" data-tab="deceased" onclick="setTab('deceased')">المتوفون <span class="count" id="cDeceased">0</span></button>
     </div>
 
     <div class="pending-banner" id="pendingBanner"></div>
@@ -593,10 +610,7 @@ footer.sig b{color:var(--primary);}
 <div id="printArea">
   <h2 id="printTitle"></h2>
   <p class="p-sub" id="printSub"></p>
-  <table>
-    <thead><tr><th>م</th><th>اسم العضو</th><th>رقم العضوية</th></tr></thead>
-    <tbody id="printBody"></tbody>
-  </table>
+  <div id="printPages"></div>
   <p class="p-footer">مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</p>
 </div>
 
@@ -628,6 +642,8 @@ const ADMINS = [
   { name: "محمد معاطي",     pass: "mo2100" },
   { name: "جمال ذكي",       pass: "ga2110" }
 ];
+const SUPER_ADMIN = "محمد حماد"; // صلاحية كاملة: تصنيف مباشر بدون 5 تصويتات + تحديد المتوفي
+function isSuper(){ return !!currentUser && currentUser.name === SUPER_ADMIN; }
 const VOTE_THRESHOLD = 5; // عدد الأصوات الذي يحسم حالة العضو تلقائياً
 
 /* ================= Members (from Excel) ================= */
@@ -642,6 +658,7 @@ let diffNew = [], diffGone = [];
 let extraRaw = {};    // id -> {name, addedBy, addedAt}  (members added manually)
 let namesRaw = {};    // id -> الاسم بعد التعديل (يُحفظ فى Firebase)
 let phonesRaw = {};   // id -> رقم الهاتف (يُحفظ فى Firebase)
+let deceasedRaw = {}; // id -> true (عضو متوفي)
 let deletedRaw = {};  // id -> true                       (soft-deleted members)
 let membersDataRaw = {}; // id -> {votes,status,manual,updatedBy,updatedAt}
 
@@ -663,6 +680,7 @@ function rebuildMembers(){
       id: base.id, name: (namesRaw[base.id] || base.name), origName: base.name, year: base.year,
       no: Object.prototype.hasOwnProperty.call(memberNoRaw, base.id) ? String(memberNoRaw[base.id] || "") : String(base.no || ""),
       crossed: !!base.crossed,
+      deceased: !!deceasedRaw[base.id],
       votes: d.votes || {},
       status: d.status || null,
       manual: !!d.manual,
@@ -862,7 +880,7 @@ function doLogout(){
 function showApp(){
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
-  document.getElementById("currentUserName").textContent = currentUser.name;
+  document.getElementById("currentUserName").innerHTML = escapeHtml(currentUser.name) + (isSuper() ? '<span class="super-badge">صلاحية كاملة</span>' : '');
   renderStats();
   renderList();
 }
@@ -916,6 +934,13 @@ function attachListeners(){
   });
 
 
+  db.ref(ROOT + "deceased").on("value", snap => {
+    deceasedRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
   db.ref(ROOT + "deleted").on("value", snap => {
     deletedRaw = snap.val() || {};
     rebuildMembers();
@@ -944,6 +969,7 @@ function castVote(memberId, choice){
   const m = membersById[memberId];
   if(!m || !currentUser) return;
   const uid = currentUser.key;
+  const sup = isSuper();
   const ref = db.ref(ROOT + "members/" + memberId);
   let prevStatus = null, finalStatus = null;
 
@@ -953,14 +979,29 @@ function castVote(memberId, choice){
     cur = cur || {};
     const votes = Object.assign({}, cur.votes || {});
     votes[uid] = choice;
-    const { winner } = computeStatusFromVotes(votes);
     prevStatus = cur.status || null;
-    finalStatus = winner || cur.status || null;
-    const out = Object.assign({}, cur, { votes: votes, manual: false });
-    if(finalStatus) out.status = finalStatus;
-    if(finalStatus && finalStatus !== prevStatus){
-      out.updatedBy = currentUser.name;
-      out.updatedAt = Date.now();
+    const out = Object.assign({}, cur, { votes: votes });
+    if(sup){
+      /* صلاحية كاملة: التصنيف يُحسم فوراً ويُقفل ولا تغيّره أصوات الآخرين */
+      finalStatus = choice;
+      out.status = choice;
+      out.manual = true;
+      if(choice !== prevStatus){
+        out.updatedBy = currentUser.name;
+        out.updatedAt = Date.now();
+      }
+    } else if(cur.manual && cur.status){
+      /* تصنيف مقفل من صاحب الصلاحية الكاملة */
+      finalStatus = cur.status;
+    } else {
+      const { winner } = computeStatusFromVotes(votes);
+      finalStatus = winner || cur.status || null;
+      out.manual = false;
+      if(finalStatus) out.status = finalStatus;
+      if(finalStatus && finalStatus !== prevStatus){
+        out.updatedBy = currentUser.name;
+        out.updatedAt = Date.now();
+      }
     }
     return out;
   }, (err, committed) => {
@@ -969,9 +1010,41 @@ function castVote(memberId, choice){
       alert("تعذّر حفظ اختيارك، حاول مرة أخرى");
       return;
     }
-    addLog(`${currentUser.name} قام بالتصويت على "${m.name}" بـ (${choiceLabel(choice)})` +
-           (finalStatus && finalStatus !== prevStatus ? ` — وأصبحت حالته "${choiceLabel(finalStatus)}" تلقائياً` : ""));
+    if(sup){
+      addLog(`${currentUser.name} قام بتصنيف "${m.name}" مباشرةً (${choiceLabel(choice)})`);
+    } else {
+      addLog(`${currentUser.name} قام بالتصويت على "${m.name}" بـ (${choiceLabel(choice)})` +
+             (finalStatus && finalStatus !== prevStatus ? ` — وأصبحت حالته "${choiceLabel(finalStatus)}" تلقائياً` : ""));
+    }
   }, true);
+}
+
+function clearStatus(memberId){
+  if(!isSuper()) return;
+  const m = membersById[memberId];
+  if(!m) return;
+  db.ref(ROOT + "members/" + memberId).update({
+    status: null,
+    manual: null,
+    updatedBy: currentUser.name,
+    updatedAt: Date.now()
+  });
+  addLog(`${currentUser.name} ألغى تصنيف "${m.name}"`);
+}
+
+function toggleDeceased(memberId){
+  if(!isSuper()) return;
+  const m = membersById[memberId];
+  if(!m) return;
+  if(m.deceased){
+    if(!confirm(`إلغاء حالة "متوفي" عن "${m.name}"؟`)) return;
+    db.ref(ROOT + "deceased/" + memberId).remove();
+    addLog(`${currentUser.name} ألغى حالة "متوفي" عن "${m.name}"`);
+  } else {
+    if(!confirm(`تحديد "${m.name}" كعضو متوفي؟`)) return;
+    db.ref(ROOT + "deceased/" + memberId).set(true);
+    addLog(`${currentUser.name} حدّد "${m.name}" كعضو متوفي`);
+  }
 }
 
 function manualSetStatus(memberId, status){
@@ -1194,6 +1267,7 @@ function renderStats(){
   document.getElementById("cTravel").textContent = travelC;
   document.getElementById("cNone").textContent = members.filter(m => !m.status).length;
   document.getElementById("cDeleted").textContent = deletedMembers.length;
+  document.getElementById("cDeceased").textContent = members.filter(m => m.deceased).length;
   document.getElementById("cSimilar").textContent = similarGroups.reduce((s, g) => s + g.length, 0);
 
   const pendingCount = currentUser ? members.filter(m => !m.votes[currentUser.key]).length : 0;
@@ -1241,6 +1315,7 @@ function filteredMembers(){
   if(currentTab === "none") list = list.filter(m => !m.status);
   else if(currentTab === "pending") list = list.filter(m => !m.votes[currentUser.key]);
   else if(currentTab === "similar") list = similarGroups.flat();
+  else if(currentTab === "deceased") list = list.filter(m => m.deceased);
   else if(currentTab !== "all" && currentTab !== "deleted") list = list.filter(m => m.status === currentTab);
   if(q){ const qn = toEnDigits(q); list = list.filter(m => m.name.includes(q) || (m.no && m.no === qn)); }
   const pf = document.getElementById("phoneFilter") ? document.getElementById("phoneFilter").value : "all";
@@ -1259,9 +1334,9 @@ function memberRowHtml(m){
   const mine = m.votes[currentUser.key];
   const statusClass = m.status || "none";
   return `
-    <div class="member-row ${mine ? '' : 'not-voted'} ${m.status === 'travel' ? 'is-travel' : ''}">
+    <div class="member-row ${mine ? '' : 'not-voted'} ${m.status === 'travel' ? 'is-travel' : ''} ${m.deceased ? 'is-deceased' : ''}">
       <span class="m-idx">${m.idx}</span>
-      <span class="m-name">${escapeHtml(m.name)}<button class="name-edit" onclick="editMemberName('${m.id}')" title="تعديل الاسم">✏ تعديل الاسم</button> ${noBadge(m)}${phoneBtns(m)}</span>
+      <span class="m-name">${escapeHtml(m.name)}${m.deceased ? '<span class="m-dead-tag">متوفي</span>' : ''}<button class="name-edit" onclick="editMemberName('${m.id}')" title="تعديل الاسم">✏ تعديل الاسم</button> ${noBadge(m)}${phoneBtns(m)}</span>
       <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
       <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure} · س:${counts.travel}</span>
       <span class="m-actions">
@@ -1269,6 +1344,7 @@ function memberRowHtml(m){
         <span class="vote-wrap"><span class="vote-count">${counts.against}</span><button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button></span>
         <span class="vote-wrap"><span class="vote-count">${counts.unsure}</span><button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button></span>
         <span class="vote-wrap"><span class="vote-count">${counts.travel}</span><button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button></span>
+        ${isSuper() ? `<span class="admin-row"><button class="vote-btn clear" onclick="clearStatus('${m.id}')">إلغاء التصنيف</button><button class="vote-btn dead ${m.deceased ? 'mine' : ''}" onclick="toggleDeceased('${m.id}')">${m.deceased ? 'إلغاء الوفاة' : 'متوفي'}</button></span>` : ''}
         <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
       </span>
     </div>`;
@@ -1341,16 +1417,86 @@ const TAB_TITLES = {
   none: "قائمة الأعضاء غير المصنفين",
   pending: "الأعضاء الذين لم يصوّت عليهم",
   deleted: "قائمة الأعضاء المحذوفين",
-  similar: "الأسماء المتشابهة"
+  similar: "الأسماء المتشابهة",
+  deceased: "قائمة الأعضاء المتوفين"
 };
+/* ---- عناصر القائمة (فى تبويب الفرق: عنوان لكل قسم) ---- */
+function buildItems(list){
+  const items = [];
+  if(currentYear === "diff" && currentTab !== "deleted" && currentTab !== "similar"){
+    [
+      ["جدد فى 2025 — غير موجودين فى قائمة 2024", list.filter(m => m.year === "2025")],
+      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", list.filter(m => m.year === "2024")]
+    ].forEach(([t, arr]) => {
+      items.push({ sec: t + " (" + arr.length + ")" });
+      if(!arr.length) items.push({ empty: true });
+      arr.forEach((m, i) => items.push({ m: m, n: i + 1 }));
+    });
+  } else {
+    list.forEach((m, i) => items.push({ m: m, n: i + 1 }));
+  }
+  return items;
+}
+
+/* ---- تقسيم الصفحات: حد أقصى 7 ورقات — لو القائمة كبيرة يصغّر ارتفاع الصف ليكفى ---- */
+const MAX_PAGES = 7;
+function planPages(items, availFirst, FIRST, REST){
+  const pages = [];
+  if(items.length <= FIRST + REST * (MAX_PAGES - 1)){
+    for(let k = 0, cap = FIRST; k < items.length; ){ pages.push(items.slice(k, k + cap)); k += cap; cap = REST; }
+    return { pages: pages, rh: 28, fs: 12 };
+  }
+  const r = Math.ceil(items.length / MAX_PAGES);
+  for(let k = 0; k < items.length; k += r) pages.push(items.slice(k, k + r));
+  const rh = Math.max(10, Math.floor(availFirst / (r + 1)));
+  return { pages: pages, rh: rh, fs: Math.max(7, Math.min(12, rh - 5)) };
+}
+
+/* ---- جدول صفحة واحدة (مشترك بين الطباعة والـ PDF) ---- */
+function tableHtml(rows, rh, fs){
+  const cell = `border:1px solid #999;padding:0 8px;height:${rh}px;line-height:1;text-align:right;font-size:${fs}px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;box-sizing:border-box;color:#000;`;
+  const th = `border:1px solid #999;background:#eee;padding:0 8px;height:${rh}px;line-height:1;text-align:right;font-size:${fs}px;font-weight:800;box-sizing:border-box;color:#000;`;
+  const rowHtml = it => {
+    if(it.sec) return `<tr><td colspan="3" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
+    if(it.empty) return `<tr><td colspan="3" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
+    const m = it.m;
+    let st = "";
+    if(m.deceased) st = "background:#ffd6d6;color:#7a1010;font-weight:700;";
+    else if(m.status === "travel") st = "background:#dbeafe;color:#1d4ed8;font-weight:700;";
+    const nm = escapeHtml(m.name) + (m.deceased ? " — متوفي" : "");
+    return `<tr><td style="${cell}${st}">${it.n}</td><td style="${cell}${st}">${nm}</td><td style="${cell}${st}">${escapeHtml(m.no || "-")}</td></tr>`;
+  };
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;">
+    <colgroup><col style="width:44px"><col><col style="width:110px"></colgroup>
+    <thead><tr><th style="${th}">م</th><th style="${th}">اسم العضو</th><th style="${th}">رقم العضوية</th></tr></thead>
+    <tbody>${rows.map(rowHtml).join("")}</tbody>
+  </table>`;
+}
+
 function printCurrentList(){
   const list = filteredMembers();
+  if(!list.length){ alert("لا يوجد أعضاء فى هذه القائمة لطباعتها"); return; }
+  const area = document.getElementById("printArea");
+  const host = document.getElementById("printPages");
   document.getElementById("printTitle").textContent = (TAB_TITLES[currentTab] || "قائمة الأعضاء") + " — " + yearLabel();
   document.getElementById("printSub").textContent =
     "مركز شباب الأحمدية — العدد: " + list.length + " — تاريخ الطباعة: " + new Date().toLocaleDateString("ar-EG");
-  document.getElementById("printBody").innerHTML = list.map((m, i) => `
-    <tr class="${m.status === 'travel' ? 'p-travel' : ''}"><td>${i+1}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.no || "-")}</td></tr>
-  `).join("");
+
+  const items = buildItems(list);
+  const plan = planPages(items, 920, 30, 34);
+  let rh = plan.rh, fs = plan.fs;
+  const draw = () => { host.innerHTML = plan.pages.map(rows => `<div class="p-page">${tableHtml(rows, rh, fs)}</div>`).join(""); };
+
+  /* معايرة: قياس الصفحة الأولى (بها العنوان) والتأكد أنها تتسع فى ورقة A4 */
+  area.classList.add("measuring");
+  draw();
+  for(let t = 0; t < 16; t++){
+    const tb = host.querySelector("table");
+    const bottom = tb.getBoundingClientRect().bottom - area.getBoundingClientRect().top;
+    if(bottom <= 1000 || rh <= 9) break;
+    rh--; fs = Math.max(7, Math.min(12, rh - 5)); draw();
+  }
+  area.classList.remove("measuring");
   window.print();
 }
 
@@ -1366,45 +1512,15 @@ async function exportCurrentPdf(){
   const dateStr = new Date().toLocaleDateString("ar-EG");
   const sub = "مركز شباب الأحمدية — العدد: " + list.length + " — التاريخ: " + dateStr;
 
-  // عناصر الجدول (فى تبويب الفرق: عنوان لكل قسم)
-  const items = [];
-  if(currentYear === "diff" && currentTab !== "deleted" && currentTab !== "similar"){
-    [
-      ["جدد فى 2025 — غير موجودين فى قائمة 2024", list.filter(m => m.year === "2025")],
-      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", list.filter(m => m.year === "2024")]
-    ].forEach(([t, arr]) => {
-      items.push({ sec: t + " (" + arr.length + ")" });
-      if(!arr.length) items.push({ empty: true });
-      arr.forEach((m, i) => items.push({ m: m, n: i + 1 }));
-    });
-  } else {
-    list.forEach((m, i) => items.push({ m: m, n: i + 1 }));
-  }
+  const items = buildItems(list);
+  const plan = planPages(items, 930, 24, 33); // صفحة A4 = 794×1123 بكسل
+  const pages = plan.pages;
+  let rh = plan.rh, fs = plan.fs;
 
-  // تقسيم الصفحات: صفحة A4 = 794×1123 بكسل، الصف 28 بكسل
-  const FIRST = 24, REST = 33;
-  const pages = [];
-  for(let k = 0, cap = FIRST; k < items.length; ){
-    pages.push(items.slice(k, k + cap)); k += cap; cap = REST;
-  }
-
-  const cell = "border:1px solid #999;padding:0 8px;height:28px;text-align:right;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;";
-  const th = "border:1px solid #999;background:#eee;padding:0 8px;height:28px;text-align:right;font-size:12px;font-weight:800;";
-  const rowHtml = it => {
-    if(it.sec) return `<tr><td colspan="3" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
-    if(it.empty) return `<tr><td colspan="3" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
-    const m = it.m;
-    const tv = m.status === "travel" ? "background:#dbeafe;color:#1d4ed8;font-weight:700;" : "";
-    return `<tr><td style="${cell}${tv}">${it.n}</td><td style="${cell}${tv}">${escapeHtml(m.name)}</td><td style="${cell}${tv}">${escapeHtml(m.no || "-")}</td></tr>`;
-  };
   const pageHtml = (rows, pi) => `
     <div dir="rtl" style="position:relative;width:794px;height:1123px;background:#fff;color:#000;font-family:'Cairo',sans-serif;direction:rtl;padding:36px 40px;box-sizing:border-box;overflow:hidden;">
       ${pi === 0 ? `<h2 style="text-align:center;margin:0 0 4px;font-size:19px;line-height:1.5;">${escapeHtml(title)}</h2><p style="text-align:center;color:#333;font-size:12px;margin:0 0 14px;line-height:1.5;">${escapeHtml(sub)}</p>` : ""}
-      <table style="width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;">
-        <colgroup><col style="width:44px"><col><col style="width:110px"></colgroup>
-        <thead><tr><th style="${th}">م</th><th style="${th}">اسم العضو</th><th style="${th}">رقم العضوية</th></tr></thead>
-        <tbody>${rows.map(rowHtml).join("")}</tbody>
-      </table>
+      ${tableHtml(rows, rh, fs)}
       <div style="position:absolute;left:40px;right:40px;bottom:20px;display:flex;justify-content:space-between;font-size:11px;color:#444;">
         <span>مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</span>
         <span>صفحة ${pi + 1} من ${pages.length}</span>
@@ -1419,6 +1535,16 @@ async function exportCurrentPdf(){
   document.body.appendChild(stage);
   try{
     if(document.fonts && document.fonts.load){ try{ await document.fonts.load("700 12px Cairo"); await document.fonts.ready; }catch(e){} }
+
+    /* معايرة على الصفحة الأولى (الأطول بسبب العنوان) لضمان عدم قص الصفوف */
+    for(let t = 0; t < 16; t++){
+      stage.innerHTML = pageHtml(pages[0], 0);
+      const pg = stage.firstElementChild;
+      const bottom = pg.querySelector("table").getBoundingClientRect().bottom - pg.getBoundingClientRect().top;
+      if(bottom <= 1075 || rh <= 9) break;
+      rh--; fs = Math.max(7, Math.min(12, rh - 5));
+    }
+
     const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
     for(let pi = 0; pi < pages.length; pi++){
       btn.textContent = "جارٍ التصدير " + (pi + 1) + "/" + pages.length;
