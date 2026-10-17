@@ -232,6 +232,10 @@ footer.sig b{color:var(--primary);}
 .member-row.not-voted{
   background:#fdf9ef;box-shadow:inset 3px 0 0 var(--accent);
 }
+/* المسافر: تظليل أزرق خفيف للصف كله */
+.member-row.is-travel{
+  background:#e6f1fa;box-shadow:inset 4px 0 0 #7fb3dc;
+}
 
 .modal-overlay{
   position:fixed;inset:0;background:rgba(18,24,20,0.45);
@@ -645,9 +649,8 @@ let membersById = {};
 let similarGroups = []; // clusters of members with near-identical names
 
 function rebuildMembers(){
-  const all = baseMembers.concat(
-    Object.keys(extraRaw).map(id => ({ id: id, name: extraRaw[id].name, year: String(extraRaw[id].year || "2025"), no: String(extraRaw[id].no || "") }))
-  );
+  /* القائمة = أسماء كشف PDF النهائي فقط (409) — تُتجاهل الإضافات اليدوية القديمة المحفوظة فى Firebase */
+  const all = baseMembers.slice();
   allByYear = { "2024": [], "2025": [] };
   delByYear = { "2024": [], "2025": [] };
   membersById = {};
@@ -665,7 +668,7 @@ function rebuildMembers(){
       updatedAt: d.updatedAt || null
     };
     membersById[m.id] = m;
-    if(deletedRaw[m.id]){
+    if(false){ /* لا حذف: كل أعضاء الكشف الـ 409 ظاهرون */
       delByYear[m.year].push(m);
     } else {
       m.idx = ++seq[m.year];
@@ -1254,7 +1257,7 @@ function memberRowHtml(m){
   const mine = m.votes[currentUser.key];
   const statusClass = m.status || "none";
   return `
-    <div class="member-row ${mine ? '' : 'not-voted'}">
+    <div class="member-row ${mine ? '' : 'not-voted'} ${m.status === 'travel' ? 'is-travel' : ''}">
       <span class="m-idx">${m.idx}</span>
       <span class="m-name">${escapeHtml(m.name)}<button class="name-edit" onclick="editMemberName('${m.id}')" title="تعديل الاسم">✏ تعديل الاسم</button> ${noBadge(m)}${phoneBtns(m)}</span>
       <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
