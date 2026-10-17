@@ -427,6 +427,8 @@ footer.sig b{color:var(--primary);}
   #printArea table{width:100%;border-collapse:collapse;font-size:13px;}
   #printArea th,#printArea td{border:1px solid #999;padding:7px 10px;text-align:right;}
   #printArea th{background:#eee;}
+  #printArea, #printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  #printArea tr.p-travel td{background:#dbeafe;color:#1d4ed8;font-weight:700;}
   #printArea .p-footer{margin-top:22px;text-align:center;font-size:12px;color:#333;}
 }
 
@@ -592,7 +594,7 @@ footer.sig b{color:var(--primary);}
   <h2 id="printTitle"></h2>
   <p class="p-sub" id="printSub"></p>
   <table>
-    <thead><tr><th>م</th><th>رقم العضوية</th><th>الاسم</th><th>الحالة</th></tr></thead>
+    <thead><tr><th>م</th><th>اسم العضو</th><th>رقم العضوية</th></tr></thead>
     <tbody id="printBody"></tbody>
   </table>
   <p class="p-footer">مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</p>
@@ -1347,7 +1349,7 @@ function printCurrentList(){
   document.getElementById("printSub").textContent =
     "مركز شباب الأحمدية — العدد: " + list.length + " — تاريخ الطباعة: " + new Date().toLocaleDateString("ar-EG");
   document.getElementById("printBody").innerHTML = list.map((m, i) => `
-    <tr><td>${i+1}</td><td>${escapeHtml(m.no || "-")}</td><td>${escapeHtml(m.name)}</td><td>${choiceLabel(m.status)}</td></tr>
+    <tr class="${m.status === 'travel' ? 'p-travel' : ''}"><td>${i+1}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.no || "-")}</td></tr>
   `).join("");
   window.print();
 }
@@ -1389,17 +1391,18 @@ async function exportCurrentPdf(){
   const cell = "border:1px solid #999;padding:0 8px;height:28px;text-align:right;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;";
   const th = "border:1px solid #999;background:#eee;padding:0 8px;height:28px;text-align:right;font-size:12px;font-weight:800;";
   const rowHtml = it => {
-    if(it.sec) return `<tr><td colspan="4" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
-    if(it.empty) return `<tr><td colspan="4" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
+    if(it.sec) return `<tr><td colspan="3" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
+    if(it.empty) return `<tr><td colspan="3" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
     const m = it.m;
-    return `<tr><td style="${cell}">${it.n}</td><td style="${cell}">${escapeHtml(m.no || "-")}</td><td style="${cell}">${escapeHtml(m.name)}</td><td style="${cell}">${escapeHtml(choiceLabel(m.status))}</td></tr>`;
+    const tv = m.status === "travel" ? "background:#dbeafe;color:#1d4ed8;font-weight:700;" : "";
+    return `<tr><td style="${cell}${tv}">${it.n}</td><td style="${cell}${tv}">${escapeHtml(m.name)}</td><td style="${cell}${tv}">${escapeHtml(m.no || "-")}</td></tr>`;
   };
   const pageHtml = (rows, pi) => `
     <div dir="rtl" style="position:relative;width:794px;height:1123px;background:#fff;color:#000;font-family:'Cairo',sans-serif;direction:rtl;padding:36px 40px;box-sizing:border-box;overflow:hidden;">
       ${pi === 0 ? `<h2 style="text-align:center;margin:0 0 4px;font-size:19px;line-height:1.5;">${escapeHtml(title)}</h2><p style="text-align:center;color:#333;font-size:12px;margin:0 0 14px;line-height:1.5;">${escapeHtml(sub)}</p>` : ""}
       <table style="width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;">
-        <colgroup><col style="width:44px"><col style="width:80px"><col><col style="width:140px"></colgroup>
-        <thead><tr><th style="${th}">م</th><th style="${th}">رقم العضوية</th><th style="${th}">الاسم</th><th style="${th}">الحالة</th></tr></thead>
+        <colgroup><col style="width:44px"><col><col style="width:110px"></colgroup>
+        <thead><tr><th style="${th}">م</th><th style="${th}">اسم العضو</th><th style="${th}">رقم العضوية</th></tr></thead>
         <tbody>${rows.map(rowHtml).join("")}</tbody>
       </table>
       <div style="position:absolute;left:40px;right:40px;bottom:20px;display:flex;justify-content:space-between;font-size:11px;color:#444;">
