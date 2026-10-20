@@ -153,6 +153,11 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .mrow button{flex:1;border:0;border-radius:12px;padding:12px;font-size:15px;font-weight:800;cursor:pointer;}
 .mrow .send{background:#25d366;color:#fff;}
 .mrow .cancel{background:#eee9dc;color:var(--ink);}
+.mrow.col{flex-direction:column;}
+.mrow .share{background:#123c34;color:#fff;}
+.prev{width:100%;max-height:42vh;object-fit:contain;border-radius:12px;border:1px solid var(--line);margin:8px 0 12px;background:#f5f3ee;min-height:60px;}
+.note{font-size:12px;color:var(--muted);text-align:center;line-height:1.6;margin:2px 0 8px;}
+.mbox{max-height:94vh;overflow-y:auto;}
 </style>
 </head>
 <body>
@@ -177,13 +182,15 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 
 <div class="modal" id="waModal" role="dialog" aria-modal="true" aria-labelledby="waTitle">
   <div class="mbox">
-    <h3 id="waTitle">إرسال البطاقة على واتساب</h3>
-    <div class="who" id="waWho"></div>
-    <input id="waPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="01XXXXXXXXX" aria-label="رقم الهاتف">
+    <h3 id="waTitle">إرسال البطاقة على واتساب (صورة)</h3>
+    <img class="prev" id="waPrev" alt="معاينة البطاقة">
+    <input id="waPhone" type="tel" inputmode="tel" autocomplete="off" placeholder="رقم الهاتف 01XXXXXXXXX" aria-label="رقم الهاتف">
     <div class="err" id="waErr"></div>
-    <div class="mrow">
+    <div class="note">يتم حفظ صورة البطاقة وفتح محادثة الرقم، ثم أرفق الصورة من المعرض (أو الصقها لو ظهر زر لصق).</div>
+    <div class="mrow col">
+      <button class="send" id="waSend">📲 حفظ الصورة وفتح واتساب على الرقم</button>
+      <button class="share" id="waShare" style="display:none">🖼️ مشاركة الصورة مباشرة (اختر المحادثة)</button>
       <button class="cancel" id="waCancel">إلغاء</button>
-      <button class="send" id="waSend">إرسال</button>
     </div>
   </div>
 </div>
@@ -411,41 +418,110 @@ $("goBtn").onclick = ()=>{ run(); qEl.blur(); };
 $("clearBtn").onclick = ()=>{ qEl.value=""; LIMIT=30; run(); qEl.focus(); };
 
 
-/* ===== إرسال البطاقة على واتساب ===== */
-const waModal=$("waModal"), waPhone=$("waPhone"), waErr=$("waErr"), waWho=$("waWho");
-let waMember=null;
+/* ===== إرسال البطاقة على واتساب كصورة ===== */
+const waModal=$("waModal"), waPhone=$("waPhone"), waErr=$("waErr"), waPrev=$("waPrev"), waShare=$("waShare");
+let waMember=null, waBlob=null, waUrl=null, waReq=0;
 function findBySeq(seq){ return DB.find(m=>m.seq===seq); }
-function openWa(seq){
+
+/* رسم البطاقة على Canvas */
+async function drawCard(m){
+  try{ await document.fonts.load('800 40px Cairo'); await document.fonts.load('900 40px Cairo'); await document.fonts.ready; }catch(e){}
+  const W=1000, PAD=50, FONT="Cairo, Tahoma, Arial, sans-serif";
+  const mc = document.createElement("canvas").getContext("2d");
+  mc.direction="rtl"; mc.font="800 56px "+FONT;
+  /* تقسيم الاسم لأسطر */
+  const words = m.name.split(/\s+/), lines=[]; let cur="";
+  for(const w of words){
+    const t = cur ? cur+" "+w : w;
+    if(mc.measureText(t).width > W-2*PAD-40 && cur){ lines.push(cur); cur=w; } else cur=t;
+  }
+  if(cur) lines.push(cur);
+  const statusText = m.dead ? "متوفي" : (m.travel ? "✈️ مسافر" : (m.crossed ? "مشطوب" : ""));
+  const headH=170, lineH=80, nameH=lines.length*lineH+50, statusH=statusText?110:0, boxH=330, footH=90;
+  const H = headH + nameH + statusH + boxH + footH + 40;
+  const c = document.createElement("canvas"); c.width=W; c.height=H;
+  const g = c.getContext("2d"); g.direction="rtl"; g.textAlign="center"; g.textBaseline="middle";
+  const rr=(x,y,w,h,r)=>{ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); };
+  const accent = m.dead ? "#c0392b" : (m.travel ? "#2f6a8c" : "#123c34");
+  /* الخلفية */
+  g.fillStyle="#f5f3ee"; g.fillRect(0,0,W,H);
+  g.fillStyle="#ffffff"; rr(20,20,W-40,H-40,36); g.fill();
+  g.lineWidth=(m.dead||m.travel)?10:3; g.strokeStyle=(m.dead||m.travel)?accent:"#e2ded3"; rr(20,20,W-40,H-40,36); g.stroke();
+  /* الترويسة */
+  g.save(); rr(20,20,W-40,headH,36); g.clip(); g.fillStyle="#123c34"; g.fillRect(20,20,W-40,headH); g.restore();
+  g.fillStyle="#fff"; g.font="800 52px "+FONT; g.fillText("مركز شباب الأحمدية", W/2, 85);
+  g.fillStyle="#c9dcd6"; g.font="600 32px "+FONT; g.fillText("الجمعية العمومية", W/2, 140);
+  /* الاسم */
+  let y = headH + 20 + 25 + lineH/2;
+  g.fillStyle="#123c34"; g.font="800 56px "+FONT;
+  lines.forEach(l=>{ g.fillText(l, W/2, y); y+=lineH; });
+  y = headH + nameH;
+  /* الحالة */
+  if(statusText){
+    g.font="800 46px "+FONT;
+    const tw = g.measureText(statusText).width + 90;
+    g.fillStyle = m.dead ? "#c0392b" : (m.travel ? "#2f6a8c" : "#b3403f");
+    rr(W/2-tw/2, y+8, tw, 78, 39); g.fill();
+    g.fillStyle="#fff"; g.fillText(statusText, W/2, y+48);
+    y += statusH;
+  }
+  /* الصندوقان */
+  const bw=(W-2*PAD-30)/2, by=y+10;
+  const box=(x,bg,fg,label,num)=>{
+    g.fillStyle=bg; rr(x,by,bw,boxH-20,30); g.fill();
+    g.fillStyle=fg; g.font="700 34px "+FONT; g.fillText(label, x+bw/2, by+55);
+    g.font="900 "+(String(num).length>4?100:150)+"px "+FONT; g.fillText(String(num), x+bw/2, by+(boxH-20)/2+35);
+  };
+  box(PAD+bw+30,"#123c34","#ffffff","رقم العضو بالكشف",m.seq);      /* يمين */
+  box(PAD,"#c8992f","#2a1f00","رقم العضوية",m.no||"—");               /* يسار */
+  /* التذييل */
+  g.fillStyle="#6b7268"; g.font="600 26px "+FONT; g.fillText("برمجة وتطوير م/ محمد حماد", W/2, H-62);
+  return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("blob")),"image/png"));
+}
+
+async function openWa(seq){
   const m = findBySeq(seq); if(!m) return;
-  waMember = m;
-  waWho.textContent = m.name + " — رقم العضو بالكشف: " + m.seq + (m.no ? " — رقم العضوية: " + m.no : "");
-  waErr.textContent = "";
+  waMember = m; waBlob = null; waErr.textContent = ""; waPrev.removeAttribute("src");
   waModal.classList.add("on");
   setTimeout(()=>waPhone.focus(),50);
+  const my = ++waReq;
+  try{
+    const b = await drawCard(m);
+    if(my!==waReq) return;
+    waBlob = b; if(waUrl) URL.revokeObjectURL(waUrl);
+    waUrl = URL.createObjectURL(b); waPrev.src = waUrl;
+    try{ waShare.style.display = (navigator.canShare && navigator.canShare({files:[new File([b],"c.png",{type:"image/png"})]})) ? "" : "none"; }catch(e){ waShare.style.display="none"; }
+  }catch(e){ waErr.textContent = "تعذر إنشاء صورة البطاقة"; }
 }
-function closeWa(){ waModal.classList.remove("on"); waMember=null; }
+function closeWa(){ waReq++; waModal.classList.remove("on"); waMember=null; }
 function cleanPhone(v){
   return String(v||"").replace(/[٠-٩۰-۹]/g, d=>AR_DIGITS[d]).replace(/\D/g,"");
 }
+function fileName(){ return "member-" + (waMember?waMember.seq:"card") + ".png"; }
+
+/* حفظ الصورة + فتح محادثة wa.me/2+الرقم */
 function sendWa(){
   const p = cleanPhone(waPhone.value);
   if(p.length < 10){ waErr.textContent = "ادخل رقم هاتف صحيح"; return; }
-  const m = waMember && findBySeq(waMember.seq); if(!m) return;
-  const msg = "مركز شباب الأحمدية — الجمعية العمومية\n"
-    + "الاسم: " + m.name + "\n"
-    + "رقم العضو بالكشف: " + m.seq + "\n"
-    + "رقم العضوية: " + (m.no || "—")
-    + (m.dead ? "\nالحالة: متوفي" : "") + (!m.dead && m.travel ? "\nالحالة: مسافر" : "");
-  /* wa.me/2 + الرقم المدخل */
-  const url = "https://wa.me/2" + p + "?text=" + encodeURIComponent(msg);
+  if(!waBlob){ waErr.textContent = "جارٍ تجهيز الصورة… حاول بعد ثانية"; return; }
+  const a = document.createElement("a"); a.href = waUrl; a.download = fileName();
+  document.body.appendChild(a); a.click(); a.remove();
+  try{ if(navigator.clipboard && window.ClipboardItem) navigator.clipboard.write([new ClipboardItem({"image/png":waBlob})]).catch(()=>{}); }catch(e){}
+  window.open("https://wa.me/2" + p, "_blank");
   closeWa();
-  window.open(url, "_blank");
+}
+/* مشاركة الصورة مباشرة عبر قائمة المشاركة (واتساب) */
+function shareWa(){
+  if(!waBlob) return;
+  const f = new File([waBlob], fileName(), {type:"image/png"});
+  navigator.share({files:[f]}).then(closeWa).catch(()=>{});
 }
 resEl.addEventListener("click", e=>{
   const card = e.target.closest(".card"); if(!card) return;
   openWa(parseInt(card.dataset.seq,10));
 });
 $("waSend").onclick = sendWa;
+waShare.onclick = shareWa;
 $("waCancel").onclick = closeWa;
 waModal.addEventListener("click", e=>{ if(e.target===waModal) closeWa(); });
 waPhone.addEventListener("keydown", e=>{ if(e.key==="Enter") sendWa(); if(e.key==="Escape") closeWa(); });
