@@ -246,19 +246,60 @@ function build(){
     const n = norm(name);
     const dead = !!deceasedRaw[id];
     const travel = !dead && !!(membersRaw[id] && membersRaw[id].status === "travel");
-    return {seq:i+1, name, no, crossed:r[2]===1, dead, travel, n, tokens:n.split(" "), joined:n.replace(/ /g,"")};
+    const tokens = n.split(" ");
+    return {seq:i+1, name, no, crossed:r[2]===1, dead, travel, n, tokens, ftokens:tokens.map(fold), joined:n.replace(/ /g,"")};
   });
 }
 build();
 
 /* ===== محرك البحث الذكي ===== */
+/* تبسيط صوتي: يحذف "ال" ويوحّد الحروف المتشابهة نطقاً (تُستخدم فى المطابقة التقريبية فقط) */
+function fold(w){
+  if(w.length>3 && w.startsWith("ال")) w = w.slice(2);
+  return w.replace(/ث/g,"س").replace(/ذ/g,"ز").replace(/ظ/g,"ض").replace(/ص/g,"س").replace(/ط/g,"ت");
+}
+function lev(a,b,max){
+  if(Math.abs(a.length-b.length)>max) return max+1;
+  let prev=[],cur=[];
+  for(let j=0;j<=b.length;j++) prev[j]=j;
+  for(let i=1;i<=a.length;i++){
+    cur[0]=i; let rowMin=cur[0];
+    for(let j=1;j<=b.length;j++){
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      if(cur[j]<rowMin) rowMin=cur[j];
+    }
+    if(rowMin>max) return max+1;
+    [prev,cur]=[cur,prev];
+  }
+  return prev[b.length];
+}
+/* درجة تطابق كلمة البحث t مع كلمة الاسم nt */
+function tScore(t,ft,nt,fnt){
+  if(nt===t) return 10;
+  if(fnt===ft) return 9;
+  if(nt.startsWith(t)) return 8;
+  if(ft.length>=2 && fnt.startsWith(ft)) return 7.5;
+  if(t.length>=2 && nt.includes(t)) return 5;
+  if(ft.length>=4){
+    const tol = ft.length>=7 ? 2 : 1;
+    const d = lev(ft,fnt,tol);
+    if(d<=tol) return 6-d*0.5;
+    /* كلمة منطوقة ناقصة/مقطوعة: نقارنها ببداية الكلمة */
+    if(fnt.length>ft.length){
+      const d2 = lev(ft,fnt.slice(0,ft.length),tol);
+      if(d2<=tol) return 4.5-d2*0.5;
+    }
+  }
+  return 0;
+}
 function search(raw){
   const q = norm(raw);
-  if(!q) return [];
+  const none = []; none.approx = false;
+  if(!q) return none;
   /* بحث بالرقم */
   if(/^\d+$/.test(q)){
     const num = String(parseInt(q,10));
-    return DB.map(m=>{
+    const r = DB.map(m=>{
       let s=0;
       if(m.no===num) s=100;
       else if(String(m.seq)===num) s=95;
@@ -266,40 +307,48 @@ function search(raw){
       else if(String(m.seq).startsWith(num)) s=35;
       return {m,s};
     }).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||a.m.seq-b.m.seq);
+    r.approx = false; return r;
   }
-  const qt = q.split(" ");
+  const qt = q.split(" "), qf = qt.map(fold);
   const qj = q.replace(/ /g,"");
-  const out = [];
+  const strict = [], loose = [];
+  let maxMatched = 0;
   for(const m of DB){
-    let total = 0, ok = true, lastPos = -1, ordered = 0, used = new Set();
-    for(const t of qt){
+    /* كل كلمة فى البحث تُطابَق مع كلمة مختلفة فى الاسم — بأي ترتيب (الأول + الثالث، الأول + الرابع …) */
+    let total = 0, matched = 0, lastPos = -1, ordered = 0; const used = new Set();
+    for(let k=0;k<qt.length;k++){
+      const t = qt[k], ft = qf[k];
       let best = 0, bestIdx = -1;
       m.tokens.forEach((nt,i)=>{
         if(used.has(i)) return;
-        let s = 0;
-        if(nt===t) s=10;
-        else if(nt.startsWith(t)) s=8;
-        else if(nt.includes(t) && t.length>=2) s=5;
-        if(s>best){best=s;bestIdx=i;}
+        const sc = tScore(t,ft,nt,m.ftokens[i]);
+        if(sc>best){best=sc;bestIdx=i;}
       });
-      if(!best){
-        /* يغطي اختلاف المسافات مثل "عبد الرحمن" و "عبدالرحمن" */
-        if(qt.length>=1 && m.joined.includes(t) && t.length>=3){ best=4; }
+      if(!best && t.length>=3 && m.joined.includes(t)) best = 4; /* اختلاف المسافات: عبد الرحمن / عبدالرحمن */
+      if(best){
+        matched++; total += best;
+        if(bestIdx>-1){ used.add(bestIdx); if(bestIdx>lastPos) ordered++; lastPos=bestIdx; }
       }
-      if(!best){ ok=false; break; }
-      if(bestIdx>-1){ used.add(bestIdx); if(bestIdx>lastPos) ordered++; lastPos=bestIdx; }
-      total += best;
     }
-    if(!ok){
-      /* مطابقة الاسم كاملاً بلا مسافات */
-      if(qt.length>1 && m.joined.includes(qj)){ ok=true; total=6*qt.length; }
+    let ok = matched===qt.length;
+    if(!ok && qt.length>1 && m.joined.includes(qj)){ ok=true; total=6*qt.length; matched=qt.length; }
+    if(ok){
+      if(ordered===qt.length) total += 3;
+      if(m.n.startsWith(q)) total += 6;
+      strict.push({m,s:total});
+    } else if(matched>0){
+      if(matched>maxMatched) maxMatched=matched;
+      loose.push({m,s:total,matched});
     }
-    if(!ok) continue;
-    if(ordered===qt.length) total += 3;
-    if(m.n.startsWith(q)) total += 6;
-    out.push({m,s:total});
   }
-  return out.sort((a,b)=>b.s-a.s||a.m.seq-b.m.seq);
+  if(strict.length){
+    strict.sort((a,b)=>b.s-a.s||a.m.seq-b.m.seq);
+    strict.approx = false; return strict;
+  }
+  /* لا توجد مطابقة كاملة (غالباً خطأ سمع/نطق): نعرض الأقرب — الأكثر كلمات مطابقة */
+  const out = loose.filter(x=>x.matched===maxMatched).sort((a,b)=>b.s-a.s||a.m.seq-b.m.seq);
+  out.approx = out.length>0;
+  return out;
 }
 
 /* ===== العرض ===== */
@@ -344,7 +393,7 @@ function run(){
   }
   lastList = search(raw);
   const n = lastList.length;
-  countEl.textContent = n ? `عدد النتائج: ${n}` : "";
+  countEl.textContent = n ? (lastList.approx ? `نتائج تقريبية (الأقرب للمنطوق): ${n}` : `عدد النتائج: ${n}`) : "";
   if(!n){
     resEl.innerHTML = `<div class="empty"><div class="big">😕</div><b>لا توجد نتائج</b>جرّب كتابة جزء آخر من الاسم أو تأكد من الإملاء.</div>`;
     return;
@@ -402,6 +451,25 @@ waModal.addEventListener("click", e=>{ if(e.target===waModal) closeWa(); });
 waPhone.addEventListener("keydown", e=>{ if(e.key==="Enter") sendWa(); if(e.key==="Escape") closeWa(); });
 
 /* ===== البحث الصوتي ===== */
+/* كلمات يضيفها المتكلم ولا تدخل فى الاسم */
+const VOICE_FILLER = new Set(["ابحث","ابحثي","دور","عن","اسم","العضو","عضو","لو","سمحت","فضلك","لي"]);
+function cleanVoice(t){
+  const w = norm(t).split(" ").filter(Boolean);
+  const kept = w.filter(x=>!VOICE_FILLER.has(x));
+  return (kept.length?kept:w).join(" ");
+}
+function pickBest(alts){
+  let best=null, bestScore=-1;
+  alts.forEach((a,idx)=>{
+    const c = cleanVoice(a); if(!c) return;
+    const r = search(c);
+    const sc = r.length ? (r.approx?0:1000) + r[0].s - idx*0.01 : -idx*0.01-1;
+    if(sc>bestScore){ bestScore=sc; best=c; }
+  });
+  return best || cleanVoice(alts[0]);
+}
+
+
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const micBtn=$("micBtn"), dock=$("dock"), hint=$("hint");
 let rec=null, listening=false;
@@ -415,12 +483,16 @@ micBtn.onclick = ()=>{
   rec.lang = "ar-EG";
   rec.interimResults = true;
   rec.continuous = false;
-  rec.maxAlternatives = 1;
+  rec.maxAlternatives = 5;
   rec.onstart = ()=>{ listening=true; micBtn.classList.add("listening"); setHint("جارٍ الاستماع… تكلم الآن",true); if(navigator.vibrate) navigator.vibrate(30); };
   rec.onresult = e=>{
-    let txt="";
-    for(let i=e.resultIndex;i<e.results.length;i++) txt += e.results[i][0].transcript;
-    if(txt){ qEl.value = txt.trim(); LIMIT=30; run(); setHint("«"+txt.trim()+"»",true); }
+    const r = e.results[e.results.length-1];
+    const alts = [];
+    for(let j=0;j<r.length;j++) if(r[j].transcript) alts.push(r[j].transcript);
+    if(!alts.length) return;
+    /* أثناء الكلام: أول احتمال — عند انتهاء الجملة: أفضل احتمال من الـ 5 */
+    const txt = r.isFinal ? pickBest(alts) : cleanVoice(alts[0]);
+    if(txt){ qEl.value = txt; LIMIT=30; run(); setHint("«"+txt+"»",true); }
   };
   rec.onerror = e=>{
     stopUI();
