@@ -177,7 +177,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 </header>
 
 <main id="results"></main>
-<div class="foot">برمجة وتطوير م/ محمد حماد</div>
+<div class="foot">برمجة وتطوير المهندس / <a href="https://web.facebook.com/en.mohamed.nasr" target="_blank" rel="noopener" style="color:var(--primary-2);font-weight:800;text-decoration:none;">محمد حماد</a></div>
 
 
 <div class="modal" id="waModal" role="dialog" aria-modal="true" aria-labelledby="waTitle">
@@ -437,7 +437,7 @@ async function drawCard(m){
   }
   if(cur) lines.push(cur);
   const statusText = m.dead ? "متوفي" : (m.travel ? "✈️ مسافر" : (m.crossed ? "مشطوب" : ""));
-  const headH=170, lineH=80, nameH=lines.length*lineH+50, statusH=statusText?110:0, boxH=330, footH=90;
+  const headH=170, lineH=80, nameH=lines.length*lineH+50, statusH=statusText?110:0, boxH=330, footH=100;
   const H = headH + nameH + statusH + boxH + footH + 40;
   const c = document.createElement("canvas"); c.width=W; c.height=H;
   const g = c.getContext("2d"); g.direction="rtl"; g.textAlign="center"; g.textBaseline="middle";
@@ -475,7 +475,7 @@ async function drawCard(m){
   box(PAD+bw+30,"#123c34","#ffffff","رقم العضو بالكشف",m.seq);      /* يمين */
   box(PAD,"#c8992f","#2a1f00","رقم العضوية",m.no||"—");               /* يسار */
   /* التذييل */
-  g.fillStyle="#6b7268"; g.font="600 26px "+FONT; g.fillText("برمجة وتطوير م/ محمد حماد", W/2, H-62);
+  g.fillStyle="#6b7268"; g.font="700 28px "+FONT; g.fillText("برمجة وتطوير المهندس / محمد حماد", W/2, H-65);
   return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("blob")),"image/png"));
 }
 
