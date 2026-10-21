@@ -131,6 +131,13 @@ main{max-width:680px;margin:0 auto;padding:16px 14px 0;}
 .mic.unsupported{opacity:.5;}
 .toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%) translateY(-10px);background:#20241f;color:#fff;border-radius:999px;padding:9px 18px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:60;max-width:92vw;text-align:center;}
 .toast.on{opacity:1;transform:translateX(-50%);}
+.valid{display:none;margin-top:12px;border-radius:16px;padding:14px 10px;text-align:center;background:#1f9d62;color:#fff;font-weight:900;font-size:clamp(18px,5.4vw,24px);line-height:1.5;animation:validBlink 1s ease-in-out infinite;}
+.valid small{display:block;font-size:13px;font-weight:700;opacity:.95;}
+.dash.ok{border:2px solid #1f9d62;animation:dashGlow 1s ease-in-out infinite;}
+.top .live b.ok{background:#1f9d62;animation:validBlink 1s ease-in-out infinite;}
+@keyframes validBlink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(31,157,98,.7);}50%{opacity:.55;box-shadow:0 0 0 10px rgba(31,157,98,0);}}
+@keyframes dashGlow{0%,100%{box-shadow:0 0 0 0 rgba(31,157,98,.55),0 2px 10px rgba(18,60,52,.07);}50%{box-shadow:0 0 0 7px rgba(31,157,98,.25),0 0 26px rgba(31,157,98,.6);}}
+@media (prefers-reduced-motion:reduce){.valid,.dash.ok,.top .live b.ok{animation:none}}
 @media (prefers-reduced-motion:reduce){.mic.listening::after{animation:none}.fill,.vs i{transition:none}}
 </style>
 </head>
@@ -148,11 +155,12 @@ main{max-width:680px;margin:0 auto;padding:16px 14px 0;}
 </header>
 
 <main>
-  <section class="dash" aria-live="polite">
+  <section class="dash" id="dash" aria-live="polite">
     <div class="att">
       <div><div class="lbl">الحضور الحالي</div><div class="big"><span id="attN">0</span> <small>/ <span id="goalN">140</span></small></div></div>
       <div class="rem" id="rem">باقي 140</div>
     </div>
+    <div class="valid" id="valid" role="status"></div>
     <div class="track"><div class="fill" id="fill"></div></div>
     <div class="sub" id="eligTxt">من أصل 409 عضو (بعد تصفية المسافرين والمتوفين)</div>
 
@@ -416,7 +424,13 @@ function stats(){
   const lean = us+them, none = att-lean;
   $("attN").textContent = att; $("goalN").textContent = GOAL; $("miniAtt").textContent = "الحضور "+att+" / "+GOAL;
   const rem = Math.max(0, GOAL-att), r = $("rem");
-  r.textContent = rem ? "باقي "+rem : "✅ اكتمل النصاب"; r.classList.toggle("done", !rem);
+  r.textContent = rem ? "باقي "+rem : (att>GOAL ? "✅ زيادة +"+(att-GOAL) : "✅ اكتمل النصاب"); r.classList.toggle("done", !rem);
+  const okNow = att >= GOAL;
+  $("dash").classList.toggle("ok", okNow);
+  $("miniAtt").classList.toggle("ok", okNow);
+  const vb = $("valid");
+  vb.style.display = okNow ? "block" : "none";
+  if(okNow) vb.innerHTML = "✅ الانتخابات صحيحة حتى الآن<small>تم الوصول للنصاب ("+GOAL+") — العدّ مستمر: الحضور "+att+(att>GOAL?" (زيادة "+(att-GOAL)+")":"")+"</small>";
   $("fill").style.width = Math.min(100, att/GOAL*100)+"%";
   $("eligTxt").textContent = "من أصل "+elig.length+" عضو (بعد تصفية المسافرين والمتوفين) — نسبة الحضور "+(elig.length?(att/elig.length*100).toFixed(1):0)+"%";
   const pu = lean ? us/lean*100 : 0, pt = lean ? them/lean*100 : 0;
