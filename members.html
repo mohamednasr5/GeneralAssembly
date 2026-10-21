@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#123c34">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>أعضاء الجمعية العمومية - مركز شباب الأحمدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#f5f3ee;
+  --surface:#ffffff;
+  --ink:#20241f;
+  --muted:#6b7268;
+  --line:#e2ded3;
+  --primary:#123c34;
+  --primary-light:#1e5c50;
+  --accent:#c8992f;
+  --with:#2f7d5b;
+  --with-bg:#e7f4ee;
+  --against:#b3403f;
+  --against-bg:#faeaea;
+  --unsure:#c08a2e;
+  --unsure-bg:#faf1de;
+  --travel:#2f6a8c;
+  --travel-bg:#e7f1f6;
+  --radius:10px;
+  --shadow:0 2px 10px rgba(18,60,52,0.08);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:'Cairo',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;min-height:100dvh;
+  padding-top:env(safe-area-inset-top,0px);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button,select,input{touch-action:manipulation;}
+button:focus-visible,select:focus-visible,input:focus-visible,[role=button]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+button:disabled{opacity:.6;cursor:wait;}
+.hidden{display:none !important;}
+
+/* ---------- Login ---------- */
+#loginScreen{
+  min-height:100vh;min-height:100dvh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.login-card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:36px 32px;
+  width:100%;
+  max-width:400px;
+}
+.login-card .badge{
+  width:52px;height:52px;border-radius:50%;
+  background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:20px;margin-bottom:16px;
+}
+.login-card h1{
+  font-size:20px;margin:0 0 6px;font-weight:800;color:var(--primary);
+}
+.login-card p.sub{margin:0 0 24px;color:var(--muted);font-size:14px;}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+select,input[type=password],input[type=text]{
+  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;
+  font-family:'Cairo',sans-serif;font-size:15px;background:#fcfbf8;color:var(--ink);
+  margin-bottom:16px;
+}
+select:focus,input:focus{outline:2px solid var(--primary-light);outline-offset:1px;}
+.btn{
+  border:none;border-radius:8px;padding:11px 18px;font-family:'Cairo',sans-serif;
+  font-weight:700;font-size:14px;cursor:pointer;transition:transform .08s ease, opacity .15s ease;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--primary);color:#fff;width:100%;}
+.btn-primary:hover{background:var(--primary-light);}
+.login-error{
+  background:var(--against-bg);color:var(--against);border-radius:8px;padding:9px 12px;
+  font-size:13px;margin-bottom:14px;display:none;
+}
+
+/* ---------- App shell ---------- */
+#app{min-height:100vh;min-height:100dvh;}
+header.topbar{
+  background:var(--primary);color:#fff;
+  padding:16px 24px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;
+}
+header.topbar .title h1{font-size:17px;margin:0;font-weight:800;}
+header.topbar .title p{margin:2px 0 0;font-size:12.5px;color:#c9dcd6;}
+.who{display:flex;align-items:center;gap:12px;font-size:13px;}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#cfe4de;background:rgba(255,255,255,0.08);padding:5px 10px;border-radius:999px;}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:#e0a93a;flex:none;}
+.conn-badge.live .conn-dot{background:#4fd18c;}
+.conn-badge.offline .conn-dot{background:#e05a5a;}
+.who .name{font-weight:700;}
+.btn-ghost{
+  background:transparent;border:1px solid rgba(255,255,255,0.4);color:#fff;
+  padding:7px 14px;border-radius:7px;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;
+}
+.btn-ghost:hover{background:rgba(255,255,255,0.12);}
+
+main{max-width:1180px;margin:0 auto;padding:24px 20px 60px;}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+@media(max-width:960px){.stats{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px;box-shadow:var(--shadow);
+}
+.stat-card .num{font-size:28px;font-weight:800;line-height:1;}
+.stat-card .lbl{margin-top:6px;color:var(--muted);font-size:13px;font-weight:600;}
+.stat-card .pct{margin-top:8px;font-size:12.5px;font-weight:700;}
+.stat-total .num{color:var(--primary);}
+.stat-with .num{color:var(--with);}
+.stat-against .num{color:var(--against);}
+.stat-unsure .num{color:var(--unsure);}
+.stat-travel .num{color:var(--travel);}
+.bar-track{height:6px;border-radius:4px;background:var(--line);margin-top:8px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;}
+
+/* activity log */
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-bottom:22px;
+}
+.panel h2{font-size:15px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line);font-weight:800;color:var(--primary);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.panel h2 .chev{font-size:14px;transition:transform .2s ease;}
+.panel.collapsed h2{border-bottom:none;}
+.panel.collapsed h2 .chev{transform:rotate(90deg);}
+.panel.collapsed #logList{display:none;}
+#logList{max-height:220px;overflow-y:auto;}
+.log-item{
+  padding:10px 18px;border-bottom:1px solid #f0eee7;font-size:13px;color:var(--ink);
+  display:flex;justify-content:space-between;gap:10px;
+}
+.log-item:last-child{border-bottom:none;}
+.log-item .t{color:var(--muted);font-size:11.5px;white-space:nowrap;}
+.log-empty{padding:20px;text-align:center;color:var(--muted);font-size:13px;}
+
+/* tabs */
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.tab-btn{
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:9px 16px;border-radius:999px;font-family:'Cairo',sans-serif;font-weight:700;
+  font-size:13.5px;cursor:pointer;
+}
+.tab-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.tab-btn .count{opacity:.75;font-weight:600;margin-inline-start:4px;}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.toolbar input[type=text]{max-width:280px;margin-bottom:0;}
+.toolbar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1;}
+.toolbar select#phoneFilter{width:auto;min-width:170px;margin-bottom:0;}
+.toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.hide-sm{display:inline;}
+.btn-print{
+  background:var(--surface);border:1px solid var(--primary);color:var(--primary);
+  padding:9px 16px;border-radius:8px;font-weight:700;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;
+}
+.btn-print:hover{background:var(--primary);color:#fff;}
+
+.list-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+.member-row{
+  display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid #f0eee7;flex-wrap:wrap;
+}
+.member-row:last-child{border-bottom:none;}
+.m-idx{color:var(--muted);font-size:12.5px;width:34px;flex:none;font-weight:700;}
+.m-name{flex:1 1 220px;font-weight:700;font-size:14.5px;min-width:180px;}
+.m-status{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;flex:none;}
+.m-status.with{background:var(--with-bg);color:var(--with);}
+.m-status.against{background:var(--against-bg);color:var(--against);}
+.m-status.unsure{background:var(--unsure-bg);color:var(--unsure);}
+.m-status.travel{background:var(--travel-bg);color:var(--travel);}
+.m-status.none{background:#f0eee7;color:var(--muted);}
+.m-votes{font-size:11px;color:var(--muted);flex:none;}
+.m-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;}
+.vote-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:3px;}
+.vote-count{
+  font-size:10.5px;font-weight:800;color:var(--muted);line-height:1;
+  min-width:16px;text-align:center;
+}
+.vote-btn{
+  border:1px solid var(--line);background:#fcfbf8;color:var(--ink);
+  padding:7px 12px;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;
+  font-family:'Cairo',sans-serif;
+}
+.vote-btn.with{border-color:var(--with);color:var(--with);}
+.vote-btn.with:hover,.vote-btn.with.mine{background:var(--with);color:#fff;}
+.vote-btn.against{border-color:var(--against);color:var(--against);}
+.vote-btn.against:hover,.vote-btn.against.mine{background:var(--against);color:#fff;}
+.vote-btn.unsure{border-color:var(--unsure);color:var(--unsure);}
+.vote-btn.unsure:hover,.vote-btn.unsure.mine{background:var(--unsure);color:#fff;}
+.vote-btn.travel{border-color:var(--travel);color:var(--travel);}
+.vote-btn.travel:hover,.vote-btn.travel.mine{background:var(--travel);color:#fff;}
+.empty-list{padding:30px;text-align:center;color:var(--muted);font-size:13.5px;}
+
+footer.sig{
+  text-align:center;color:var(--muted);font-size:12.5px;padding:26px 0 10px;
+}
+footer.sig b{color:var(--primary);}
+
+.vote-btn.danger{border-color:var(--against);color:var(--against);opacity:.75;}
+.vote-btn.danger:hover{background:var(--against);color:#fff;opacity:1;}
+
+.pending-banner{
+  display:none;background:var(--unsure-bg);border:1px solid var(--unsure);color:#7a5a1c;
+  border-radius:9px;padding:11px 16px;font-size:13.5px;font-weight:700;margin-bottom:14px;
+}
+.pending-banner.show{display:block;}
+.member-row.not-voted{
+  background:#fdf9ef;box-shadow:inset 3px 0 0 var(--accent);
+}
+/* المسافر: تظليل أزرق خفيف للصف كله */
+.member-row.is-travel{
+  background:#e6f1fa;box-shadow:inset 4px 0 0 #7fb3dc;
+}
+
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(18,24,20,0.45);
+  display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;
+}
+.modal-card{
+  background:var(--surface);border-radius:var(--radius);padding:26px;width:100%;max-width:380px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
+.modal-card h3{margin:0 0 16px;font-size:16px;color:var(--primary);font-weight:800;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
+.btn-ghost-dark{
+  background:transparent;border:1px solid var(--line);color:var(--muted);
+  padding:9px 16px;border-radius:7px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer;
+}
+.btn-ghost-dark:hover{background:#f0eee7;}
+
+/* ---------- Bottom mobile nav ---------- */
+.bottom-nav{
+  display:none;
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:var(--primary);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -6px 20px rgba(0,0,0,0.22);
+  align-items:center;justify-content:space-between;
+  border-top:1px solid rgba(255,255,255,0.08);
+}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;color:#a9c3bc;padding:6px 2px;font-family:'Cairo',sans-serif;
+  font-size:10.5px;font-weight:700;position:relative;cursor:pointer;
+}
+.bn-item svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.bn-item.active{color:var(--accent);}
+.bn-dot{
+  position:absolute;top:2px;left:calc(50% + 10px);width:8px;height:8px;border-radius:50%;
+  background:var(--accent);display:none;
+}
+.bn-dot.show{display:block;}
+.bn-add{
+  flex:none;width:52px;height:52px;border-radius:50%;
+  background:var(--accent);color:var(--primary);border:4px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;margin-top:-26px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;
+}
+.bn-add svg{width:24px;height:24px;stroke:var(--primary);stroke-width:2.6;fill:none;stroke-linecap:round;}
+
+@media(max-width:820px){
+  .stat-total{grid-column:1 / -1;}
+}
+@media(max-width:720px){
+  .bottom-nav{display:flex;padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right));}
+  main{padding:14px max(12px,env(safe-area-inset-right)) 104px max(12px,env(safe-area-inset-left));}
+  header.topbar{padding:calc(12px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left));gap:8px;}
+  header.topbar .title{flex:1 1 100%;}
+  header.topbar .title h1{font-size:16px;}
+  header.topbar .title p{font-size:12px;}
+  .who{width:100%;justify-content:space-between;gap:8px;font-size:12.5px;}
+  .who-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hello-txt{display:none;}
+  .btn-ghost{padding:7px 12px;font-size:12.5px;min-height:36px;}
+  .conn-badge{font-size:11px;padding:4px 9px;}
+
+  /* year switch: one segmented row */
+  .year-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+  .year-btn{flex:none;padding:9px 4px;font-size:13px;border-width:1.5px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25;min-height:54px;justify-content:center;}
+  .year-btn .count{margin:0;font-size:12px;}
+  .hide-sm{display:none;}
+
+  /* stats */
+  .stats{gap:8px;margin-bottom:14px;}
+  .stat-card{padding:12px 12px 11px;}
+  .stat-card .num{font-size:24px;}
+  .stat-card .lbl{font-size:12px;margin-top:5px;line-height:1.35;}
+  .stat-card .pct{font-size:11.5px;margin-inline-start:2px;}
+  .bar-track{margin-top:7px;height:5px;}
+  .stat-total{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .stat-total .lbl{margin-top:0;font-size:13px;}
+
+  .panel{margin-bottom:14px;}
+  .panel h2{padding:13px 14px;font-size:14px;}
+  #logList{max-height:180px;}
+  .log-item{padding:9px 14px;flex-direction:column;gap:2px;}
+
+  /* tabs */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;margin-inline:-12px;padding-inline:12px;scroll-snap-type:x proximity;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab-btn{flex:none;padding:9px 14px;min-height:40px;scroll-snap-align:center;white-space:nowrap;}
+
+  /* toolbar */
+  .toolbar{flex-direction:column;align-items:stretch;gap:8px;}
+  .toolbar input[type=text]{max-width:100%;padding:12px 14px;}
+  .toolbar-left{flex-direction:column;align-items:stretch;}
+  .toolbar select#phoneFilter{width:100%;padding:12px 14px;}
+  .toolbar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .btn-add-desktop{display:none;}
+  .toolbar .btn-print{min-height:42px;}
+  .pending-banner{font-size:12.5px;padding:10px 12px;}
+
+  /* member card */
+  .list-wrap{border-radius:12px;}
+  .member-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px 8px;align-items:center;padding:12px 12px 13px;}
+  .m-idx{grid-column:1;width:auto;text-align:center;font-size:12px;}
+  .m-name{grid-column:2;min-width:0;flex:none;font-size:15px;line-height:1.45;word-break:break-word;}
+  .m-status{grid-column:3;justify-self:end;align-self:center;}
+  .m-votes{display:none;}
+  .m-actions{grid-column:1 / -1;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;}
+  .m-actions .vote-wrap{width:100%;flex-direction:row-reverse;gap:6px;align-items:stretch;}
+  .m-actions .vote-wrap .vote-btn{flex:1;width:auto;min-height:44px;padding:8px 6px;font-size:12.5px;}
+  .m-actions .vote-count{align-self:center;min-width:20px;font-size:12px;}
+  .m-actions .vote-btn.danger{grid-column:1 / -1;width:100%;min-height:40px;padding:8px;}
+  .similar-group-title{padding:10px 12px;}
+  footer.sig{padding:20px 0 6px;}
+
+  /* modal as bottom sheet */
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .modal-card{max-width:none;border-radius:16px 16px 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom,0px));}
+  .modal-actions{gap:10px;}
+  .modal-actions .btn,.modal-actions .btn-ghost-dark{flex:1;min-height:46px;width:auto !important;}
+
+  /* iOS: 16px inputs stop auto-zoom on focus */
+  select,input[type=password],input[type=text]{font-size:16px;}
+  .login-card{padding:28px 20px;}
+  .btn{min-height:46px;}
+}
+@media(max-width:400px){
+  .stat-card .num{font-size:22px;}
+  .tab-btn{padding:8px 12px;font-size:13px;}
+  .m-actions .vote-wrap .vote-btn{font-size:12px;}
+  .year-btn{font-size:12.5px;}
+}
+@media(hover:none){
+  .vote-btn.with:hover:not(.mine){background:#fcfbf8;color:var(--with);}
+  .vote-btn.against:hover:not(.mine){background:#fcfbf8;color:var(--against);}
+  .vote-btn.unsure:hover:not(.mine){background:#fcfbf8;color:var(--unsure);}
+  .vote-btn.travel:hover:not(.mine){background:#fcfbf8;color:var(--travel);}
+  .vote-btn.danger:hover{background:#fcfbf8;color:var(--against);opacity:.75;}
+  .btn-print:hover{background:var(--surface);color:var(--primary);}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important;}
+}
+
+/* year switch */
+.year-switch{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.year-btn{flex:1 1 150px;border:2px solid var(--primary);background:var(--surface);color:var(--primary);padding:12px 14px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:800;font-size:15px;cursor:pointer;}
+.year-btn.active{background:var(--primary);color:#fff;}
+.year-btn .count{opacity:.8;font-weight:600;margin-inline-start:6px;font-size:13px;}
+.similar-group{border-bottom:8px solid var(--bg);}
+.similar-group-title{padding:10px 16px;background:#f0eee7;font-weight:800;font-size:13.5px;color:var(--primary);}
+
+
+/* ---------- تعديل الاسم ---------- */
+.name-edit{display:inline-flex;align-items:center;gap:3px;margin-inline-start:6px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:#fcfbf8;color:var(--muted);font-family:'Cairo',sans-serif;font-size:11px;font-weight:700;cursor:pointer;vertical-align:middle;}
+.name-edit:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+.name-edited{font-size:10.5px;color:var(--accent);font-weight:700;margin-inline-start:4px;}
+@media(max-width:720px){.name-edit{padding:5px 10px;font-size:12px;}}
+@media(hover:none){.name-edit:hover{background:#fcfbf8;color:var(--muted);border-color:var(--line);}}
+
+/* ---------- أرقام الهاتف ---------- */
+.m-phone{display:inline-flex;align-items:center;gap:5px;margin-inline-start:6px;vertical-align:middle;}
+.ph-btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;border:none;border-radius:999px;cursor:pointer;text-decoration:none;font-family:'Cairo',sans-serif;font-weight:700;font-size:11.5px;line-height:1;}
+.ph-btn svg{width:15px;height:15px;flex:none;}
+.ph-add{background:#f3f3f3;color:#555;border:1px dashed #aaa;padding:3px 9px;font-weight:600;}
+.ph-add:hover{background:#e9e9e9;}
+.ph-call{background:#2f9e5b;color:#fff;width:28px;height:28px;}
+.ph-call svg{fill:#fff;}
+.ph-wa{background:#25D366;color:#fff;width:28px;height:28px;}
+.ph-wa svg{fill:#fff;}
+.ph-edit{background:#eef1ee;color:#555;width:24px;height:24px;font-size:12px;}
+.ph-call:hover,.ph-wa:hover{filter:brightness(.92);}
+@media(max-width:720px){
+  .ph-call,.ph-wa{width:34px;height:34px;}
+  .ph-call svg,.ph-wa svg{width:18px;height:18px;}
+  .ph-edit{width:30px;height:30px;}
+  .ph-add{padding:6px 11px;font-size:12.5px;}
+}
+
+/* Print */
+#printArea{display:none;}
+#printArea h2{text-align:center;color:#000;margin:0 0 4px;font-size:18px;line-height:1.4;font-family:'Cairo',sans-serif;}
+#printArea .p-sub{text-align:center;color:#333;font-size:12px;line-height:1.4;margin:0 0 10px;font-family:'Cairo',sans-serif;}
+#printArea table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:'Cairo',sans-serif;}
+#printArea .p-footer{margin:10px 0 0;text-align:center;font-size:11px;line-height:1.4;color:#333;font-family:'Cairo',sans-serif;}
+#printArea.measuring{display:block !important;position:absolute;left:-10000px;top:0;width:718px;direction:rtl;background:#fff;}
+@page{size:A4;margin:10mm;}
+@media print{
+  html,body{background:#fff !important;margin:0 !important;padding:0 !important;min-height:0 !important;}
+  body > *:not(#printArea){display:none !important;}
+  #printArea{display:block !important;position:static;padding:0;width:100%;direction:rtl;}
+  #printArea .p-page:not(:last-child){break-after:page;page-break-after:always;}
+  #printArea, #printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+}
+
+.year-switch{display:none !important;}
+.m-no{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;background:#e6efec;color:#123c34;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap;vertical-align:middle;}
+.m-no.empty{background:#f3f3f3;color:#888;font-weight:600;border:1px dashed #bbb;}
+.m-no.dup{background:#fff1d6;color:#8a5a00;}
+.m-no.x{background:#fde4e4;color:#a02020;cursor:default;}
+
+/* ---------- متوفي + صلاحيات المدير ---------- */
+.member-row.is-deceased{background:#ffd9d9 !important;box-shadow:inset 4px 0 0 #f28b8b !important;}
+.m-dead-tag{display:inline-block;margin-inline-start:6px;padding:1px 9px;border-radius:999px;background:#f4a9a9;color:#7a1010;font-size:11.5px;font-weight:800;vertical-align:middle;}
+.admin-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;}
+.vote-btn.dead{border-color:#c0504d;color:#a02a2a;background:#fff3f3;}
+.vote-btn.dead:hover,.vote-btn.dead.mine{background:#d9605c;color:#fff;}
+.vote-btn.clear{border-color:var(--muted);color:var(--muted);}
+.vote-btn.clear:hover{background:var(--muted);color:#fff;}
+.super-badge{display:inline-block;margin-inline-start:6px;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--primary);font-size:10.5px;font-weight:800;}
+@media(max-width:720px){
+  .m-actions .admin-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .admin-row .vote-btn{min-height:44px;width:100%;}
+}
+@media(hover:none){
+  .vote-btn.dead:hover:not(.mine){background:#fff3f3;color:#a02a2a;}
+  .vote-btn.clear:hover{background:#fcfbf8;color:var(--muted);}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="badge">ج ع</div>
+    <h1>أعضاء الجمعية العمومية</h1>
+    <p class="sub">مركز شباب الأحمدية — تسجيل الدخول للجنة</p>
+    <div class="login-error" id="loginError">الاسم أو كلمة السر غير صحيحة</div>
+    <label for="adminSelect">اختر اسمك</label>
+    <select id="adminSelect">
+      <option value="">-- اختر --</option>
+    </select>
+    <label for="adminPass">كلمة السر</label>
+    <input type="password" id="adminPass" placeholder="ادخل كلمة السر" autocomplete="current-password" enterkeyhint="go">
+    <button class="btn btn-primary" onclick="doLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="title">
+      <h1>أعضاء الجمعية العمومية</h1>
+      <p>مركز شباب الأحمدية</p>
+    </div>
+    <div class="who">
+      <span class="conn-badge" id="connBadge"><i class="conn-dot"></i><span id="connText">جارٍ الاتصال...</span></span>
+      <span class="who-name"><span class="hello-txt">مرحباً، </span><span class="name" id="currentUserName"></span></span>
+      <button class="btn-ghost" onclick="doLogout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="year-switch">
+      <button class="year-btn" data-year="2024" onclick="setYear('2024')"><span class="yl">أعضاء 2024</span> <span class="count" id="cY2024">0</span></button>
+      <button class="year-btn active" data-year="2025" onclick="setYear('2025')"><span class="yl">أعضاء 2025</span> <span class="count" id="cY2025">0</span></button>
+      <button class="year-btn" data-year="diff" onclick="setYear('diff')"><span class="yl">الفرق<span class="hide-sm"> بين 2024 و 2025</span></span> <span class="count" id="cYdiff">0</span></button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card stat-total">
+        <div class="num" id="statTotal">0</div>
+        <div class="lbl" id="statTotalLbl">إجمالي أعضاء الجمعية</div>
+      </div>
+      <div class="stat-card stat-with">
+        <div class="num" id="statWith">0</div>
+        <div class="lbl">معانا 100% <span class="pct" id="pctWith">0%</span></div>
+        <div class="bar-track"><div class="bar-fill" id="barWith" style="background:var(--with);width:0%"></div></div>
+      </div>
+      <div class="stat-card stat-against">
+        <div class="num" id="statAgainst">0</div>
+        <div class="lbl">مش معانا 100% <span class="pct" id="pctAgainst">0%</span></div>
+        <div class="bar-track"><div class="bar-fill" id="barAgainst" style="background:var(--against);width:0%"></div></div>
+      </div>
+      <div class="stat-card stat-unsure">
+        <div class="num" id="statUnsure">0</div>
+        <div class="lbl">مشكوك فى أمره <span class="pct" id="pctUnsure">0%</span></div>
+        <div class="bar-track"><div class="bar-fill" id="barUnsure" style="background:var(--unsure);width:0%"></div></div>
+      </div>
+      <div class="stat-card stat-travel">
+        <div class="num" id="statTravel">0</div>
+        <div class="lbl">مسافر <span class="pct" id="pctTravel">0%</span></div>
+        <div class="bar-track"><div class="bar-fill" id="barTravel" style="background:var(--travel);width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Activity log -->
+    <div class="panel" id="logPanel">
+      <h2 onclick="toggleLog()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleLog();}"><span>سجل العمليات</span><span class="chev" aria-hidden="true">▾</span></h2>
+      <div id="logList"><div class="log-empty">لا توجد عمليات بعد</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="all" onclick="setTab('all')">الكل <span class="count" id="cAll">0</span></button>
+      <button class="tab-btn" data-tab="with" onclick="setTab('with')">معانا <span class="count" id="cWith">0</span></button>
+      <button class="tab-btn" data-tab="against" onclick="setTab('against')">مش معانا <span class="count" id="cAgainst">0</span></button>
+      <button class="tab-btn" data-tab="unsure" onclick="setTab('unsure')">مشكوك فيهم <span class="count" id="cUnsure">0</span></button>
+      <button class="tab-btn" data-tab="travel" onclick="setTab('travel')">مسافرون <span class="count" id="cTravel">0</span></button>
+      <button class="tab-btn" data-tab="none" onclick="setTab('none')">لم يُصنّف <span class="count" id="cNone">0</span></button>
+      <button class="tab-btn" data-tab="pending" onclick="setTab('pending')">لم أصوّت عليهم بعد <span class="count" id="cPending">0</span></button>
+      <button class="tab-btn" data-tab="deleted" onclick="setTab('deleted')">المحذوفون <span class="count" id="cDeleted">0</span></button>
+      <button class="tab-btn" data-tab="similar" onclick="setTab('similar')">أسماء متشابهة <span class="count" id="cSimilar">0</span></button>
+      <button class="tab-btn" data-tab="deceased" onclick="setTab('deceased')">المتوفون <span class="count" id="cDeceased">0</span></button>
+    </div>
+
+    <div class="pending-banner" id="pendingBanner"></div>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input type="text" id="searchBox" placeholder="بحث بالاسم..." oninput="renderList()" enterkeyhint="search" autocomplete="off">
+        <select id="phoneFilter" onchange="renderList()" aria-label="فلتر أرقام الهاتف">
+          <option value="all">📞 الكل (بغض النظر عن الرقم)</option>
+          <option value="has">✅ لديهم رقم هاتف</option>
+          <option value="none">❌ بدون رقم هاتف</option>
+        </select>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn-print btn-add-desktop" onclick="openAddModal()">+ إضافة عضو جديد</button>
+        <button class="btn-print" onclick="printCurrentList()">طباعة القائمة</button>
+        <button class="btn-print" id="pdfBtn" onclick="exportCurrentPdf()">تصدير PDF</button>
+      </div>
+    </div>
+
+    <div class="list-wrap" id="listWrap"></div>
+
+    <footer class="sig">برمجة وتطوير <b>م/ محمد حماد</b></footer>
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bn-item active" data-nav="all" onclick="bottomNavGo('all')">
+      <svg viewBox="0 0 24 24"><path d="M4 21v-2a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2"/><circle cx="9" cy="7" r="3"/><path d="M16 3.5a3 3 0 0 1 0 5.8"/><path d="M18 21v-1.6a3.9 3.9 0 0 0-2.3-3.6"/></svg>
+      <span>الكل</span>
+    </button>
+    <button class="bn-item" data-nav="pending" onclick="bottomNavGo('pending')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span>متبقّي لى</span>
+      <i class="bn-dot" id="bnPendingDot"></i>
+    </button>
+    <button class="bn-add" onclick="openAddModal()" aria-label="إضافة عضو">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="bn-item" data-nav="with" onclick="bottomNavGo('with')">
+      <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>معانا</span>
+    </button>
+    <button class="bn-item" data-nav="against" onclick="bottomNavGo('against')">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <span>مش معانا</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ===================== ADD MEMBER MODAL ===================== -->
+<div id="addModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3>إضافة عضو جديد للجمعية</h3>
+
+    <label for="addMemberInput">اسم العضو</label>
+    <input type="text" id="addMemberInput" placeholder="اكتب اسم العضو بالكامل" autocomplete="off" enterkeyhint="done">
+    <label for="addMemberNo" style="margin-top:10px;display:block;">رقم العضوية (اختياري)</label>
+    <input type="text" id="addMemberNo" inputmode="numeric" placeholder="مثال: 152" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn-ghost-dark" onclick="closeAddModal()">إلغاء</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="confirmAddMember()">إضافة</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PRINT AREA ===================== -->
+<div id="printArea">
+  <h2 id="printTitle"></h2>
+  <p class="p-sub" id="printSub"></p>
+  <div id="printPages"></div>
+  <p class="p-footer">مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</p>
+</div>
+
+<script>
+/* ================= Firebase config ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCnmHODYvozhVWuHto7MUXDM_DuTKpMUxc",
+  authDomain: "maaana-879b4.firebaseapp.com",
+  databaseURL: "https://maaana-879b4-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "maaana-879b4",
+  storageBucket: "maaana-879b4.firebasestorage.app",
+  messagingSenderId: "481238809279",
+  appId: "1:481238809279:web:345c1d655b56699231e40a"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+/* مسار جديد فارغ = بداية جديدة لكل الاستبيانات (البيانات القديمة تحت "assembly" لم تُمس) */
+const ROOT = "assembly_v3/";
+
+/* ================= Admins ================= */
+const ADMINS = [
+  { name: "محمد العشري",    pass: "mo2030" },
+  { name: "محمد حماد",       pass: "mo2040" },
+  { name: "مصطفى الحسن",    pass: "mo2050" },
+  { name: "يحيى النجار",     pass: "ya2060" },
+  { name: "كرم النجار",      pass: "ka2070" },
+  { name: "علي اسامة",      pass: "al2080" },
+  { name: "اسلام عبد المجيد", pass: "is2090" },
+  { name: "محمد معاطي",     pass: "mo2100" },
+  { name: "جمال ذكي",       pass: "ga2110" }
+];
+const SUPER_ADMIN = "محمد حماد"; // صلاحية كاملة: تصنيف مباشر بدون 5 تصويتات + تحديد المتوفي
+function isSuper(){ return !!currentUser && currentUser.name === SUPER_ADMIN; }
+const VOTE_THRESHOLD = 5; // عدد الأصوات الذي يحسم حالة العضو تلقائياً
+
+/* ================= Members (from Excel) ================= */
+/* قائمة الأعضاء: [الاسم, رقم العضوية, مشطوب فى الكشف(1/0), المعرّف الأصلي] — الترتيب كما فى كشف PDF النهائي (409 عضواً) */
+const ROSTER = [["عباس عباس يوسف مصطفى","1",0,0],["الشحات شحاته اسماعيل رمضان","2",0,1],["سعد سعد حسين سليم","3",0,2],["احمد مصطفى محمد النجار","4",0,3],["بكر بكر احمد عبدالرازق","5",0,4],["عاطف محمد احمد النجار","6",0,5],["الخولي عزت محمد الخولي","7",0,6],["السيد سعد عبدالرازق الغضبان","8",0,7],["نبيل ابراهيم خميس سليم","9",0,8],["الحسن مصطفى مسعد ابو زيد","10",0,9],["احمد احمد احمد الديب","12",0,10],["راجح محمد عبد الخالق","13",1,11],["رجب محمود سمره الخولي","15",0,12],["ابراهيم مصطفى مصطفى عيد","17",0,13],["هشام محمد محمد شلبي","20",0,14],["الغريب السيد عبدالرازق يوسف","21",0,15],["محمد محمد رشاد عبد القادر النجار","22",0,16],["محمد احمد محمد عماره","26",0,17],["هاني احمد محمد دياب","27",0,18],["وائل عبده عبده محمد عبد","28",1,19],["الحسيني محمد محمد شلبي","29",0,20],["زيدان ذكي محمد عبدالرازق","30",0,21],["عصام مصطفى محمد النجار","31",0,22],["عبدالرازق سعد عبدالرازق الغضبان","32",0,23],["العربي الحسيني يونس محمد","33",0,24],["شريف علي علي الغضبان","34",0,25],["احمد علي محمد النشار","35",0,26],["محمد حسن حسن علي البويسي","36",0,27],["محمد محمود محمد الجوهري","37",0,28],["محمود محمود محمد الجوهري","38",1,29],["السيد عوض عبدالله رمضان","40",1,30],["اشرف حسن حسن علي البويسي","42",0,31],["عمر صلاح طه سليم","43",1,32],["عبد الفتاح فهمي محمد مصطفى","45",0,33],["خالد حلمي خميس فياض","47",0,34],["احمد احمد محمد عماره","48",0,35],["محمد احمد احمد المتولي","49",0,36],["محمد الحسيني يونس محمد","50",0,37],["احمد عبد الفتاح محمد مصطفى","51",0,38],["محمد عبد الفتاح محمد مصطفى","52",0,39],["محمد صلاح عبد العزيز احمد فياض","53",0,40],["هاني خالد ذكي البويسي","54",1,41],["مجدي عبدالروف شلبي عبد الجواد","56",1,42],["السيد عنبر يوسف خميس فياض","57",0,43],["ابو زيد محمد يونس الوصيف","58",0,44],["هاني شاكر احمد الديب","59",1,45],["جمال محمد الداودي محمد احمد","60",0,46],["طاهر خالد ذكي علي","62",1,47],["السعيد انيس السيد السيد","64",1,48],["عصام حسن حسن البويسي","66",1,49],["محمد فهيم فهيم النقيطي","67",0,50],["محمد عباس عباس يوسف","72",0,51],["محمد عبدالرازق ذكي علي البويسي","73",1,52],["حماده محمد القعقاع علي السيد","75",1,53],["محمد محمد محمد القعقاع هلال","76",0,54],["علاء الدين فهيم فهيم يوسف","78",0,55],["هاني رشاد عبدالرازق الغضبان","79",1,56],["احمد فؤاد فؤاد علام","80",0,57],["اشرف عوض عبدالله رمضان","83",0,58],["سامح عزام محمد علي بدريه","84",0,59],["محمد انيس السيد حبه","87",1,60],["احمد محمد احمد الديب","88",0,61],["محمد عزت محمد شلبي","90",0,62],["تامر خميس يوسف خميس","96",0,63],["محمد محمد فؤاد علام","97",0,64],["ابراهيم حسن محمد سليم","98",0,65],["ابراهيم محمد محمد سليم","99",0,66],["يحي يحي محمد ابراهيم","104",0,67],["محمد السيد عبد بدريه","108",0,68],["محمد محمد صالح شلبي","109",0,69],["صلاح صلاح عبد العزيز احمد فياض","111",0,70],["كرم يحي محمد احمد النجار","117",0,71],["محمد الشحات شحاته اسماعيل","118",0,72],["السيد ابو المعاطي ابو المعاطي الوصيف","122",0,73],["عزت عزت محمد محمد الخولي","123",0,74],["وائل محمد صالح شلبي عبد الجواد","124",0,75],["صبيح محمد رشاد ابراهيم سليم","126",1,76],["احمد الحسيني يونس محمد","127",0,77],["احمد السيد سعد عبدالرازق","133",0,78],["احمد الشحات شحاته اسماعيل","134",1,79],["احمد بكر بكر احمد","135",0,80],["العربي موسي موسي خميس فياض","137",0,81],["فؤاد فؤاد فؤاد محمد علام","141",0,82],["خالد حموده محمد شلبي","142",0,83],["محمد جمال خالد الديب","143",0,84],["حماده شعبان السيد الوصيف","145",0,85],["احمد فتحي عبد عبد القادر","156",0,86],["رضا علي محمد احمد النشار","158",0,87],["احمد زكريا عبد الهادي سليم","161",1,88],["حسام محمد رشاد ابراهيم سليم","163",1,89],["محمد سمير احمد الديب","165",1,90],["احمد جمعه محمد علي الغضبان","168",1,91],["اسلام احمد احمد المتولي","170",0,92],["جاد عبد عبد العزبي","171",0,93],["حسام كامل محمد يوسف","172",1,94],["فهمي رشاد عبدالرازق الغضبان","175",0,95],["اسلام سمير احمد الديب","176",0,96],["عماد رشاد خميس سليم","177",0,97],["محمد شلبي شلبي عبد الجواد","178",0,98],["احمد محمد رشاد محمد عبد القادر","179",0,99],["محمد ابو النور السيد حموده","180",0,100],["محمد عبد يونس محمد","181",0,101],["فهمي عبد الفتاح محمد مصطفى","186",0,102],["احمد ذكي ذكي محمد عبدالرازق","188",0,103],["محمد سعد سعد سليم","190",0,104],["احمد سعد سعد سليم","191",1,105],["اسلام ابو النور السعيد حموده","198",1,106],["احمد عاطف محمد النجار","200",0,107],["جمال عبد الناصر عبد العزيز","201",1,108],["احمد حلمي صبيح عبدالرازق","203",1,109],["محمد فؤاد فؤاد علام","205",0,110],["حسام الدين الخولي عزت الخولي","206",0,111],["امير محمد الموافي عبد الجواد","207",1,112],["انيس انيس السيد حبه","209",0,113],["وائل محمد احمد المتولي","210",0,114],["محمود محمد محمد هلال","211",0,115],["خالد جمال خالد الديب","212",0,116],["محمد السيد سعد عبدالرازق","214",0,117],["محمد نبيل ابراهيم سليم","215",0,118],["لطفي جمعه ابو النور مسعد","217",0,119],["محمود السيد محمود عبدالرازق","219",0,120],["نسيم رشاد عبد عبد القادر","222",0,121],["محمود فتحي عبد الوهاب حماد","229",0,122],["ابراهيم محسن فهيم يوسف","230",1,123],["عمر سمير احمد الديب","232",0,124],["عماد السيد عبدالرازق يوسف","234",0,125],["كامل عباس عباس يوسف","235",0,126],["محمد السيد يوسف خميس","237",0,127],["احمد ابراهيم مصطفى عيد","238",1,128],["محمد محمد زكي محمد عبدالرازق","239",1,129],["محمد بكر بكر احمد عبدالرازق","240",1,130],["احمد عبدالروف شلبي عبد الجواد","242",1,131],["احمد اشرف ذكي عبد الجواد","243",0,132],["باسم عادل طلعت يوسف","248",0,133],["حسام محمد فؤاد علام","249",0,134],["معاذ احمد مصطفى احمد النجار","251",0,135],["سعد الدين سعد سعد سليم","254",0,136],["ابراهيم الشحات شحاته اسماعيل","256",1,137],["حسام احمد عبدالرازق الغضبان","255",0,138],["احمد صبري احمد عبدالرازق","262",1,139],["محمد محمد الموافي عبد الجواد","263",1,140],["محمد صالح محمد فياض","264",0,141],["صالح شاكر احمد الديب","266",0,142],["حسني عوض حسن بركات","269",1,143],["محمد عوض عبدالله رمضان","274",0,144],["احمد شاكر احمد الديب","275",0,145],["احمد محمد فؤاد علام","278",0,146],["محمد ابراهيم عبد الهادي سليم","338",0,147],["احمد محسن فؤاد علام","341",1,148],["احمد الحسيني ابراهيم مصطفى","344",0,149],["احمد راجح محمد عبد الخالق","346",0,150],["اسلام محمد فتحي علي اسماعيل","349",0,151],["محمد محمد ابراهيم العشري","382",0,152],["حسين رافت محمد رزق","383",0,153],["محمد عوض ابراهيم عبدالرازق","384",0,154],["حسن رافت محمد رزق","385",1,155],["الجرايحي شعبان السيد السيد","387",0,156],["محمد ابو المعاطي الداودي ابو المعاطي","388",0,157],["محمد ابراهيم ابراهيم سباع","390",0,158],["مصطفى الحسن مصطفى ابو زيد","391",0,159],["احمد عاطف مجاهد عبدالرازق","394",0,160],["ايمان عاطف مجاهد عبدالرازق","395",0,161],["محمد صلاح علي سالم","396",1,162],["اسماء سعد سعد سليم","279",0,163],["كريمه الخولي عزت الخولي","290",0,164],["سمر جمعه محمود سمره الخولي","314",0,165],["عبير عوض احمد الامام","322",0,166],["ساره السيد سعد عبدالرازق","332",0,167],["الزهراء مسعد صابر عبد الجواد","359",0,168],["حسني السيد سعد عبدالرازق","398",0,169],["محمد محمد السيد عبدالرازق","399",0,170],["محمد فتحي علي اسماعيل","400",0,171],["محمد السيد مسعد بدوي سليم","401",0,172],["وحيد عبدالرازق محمد الدسوقي سباع","402",0,173],["جمال جمال ذكي محمد عبدالرازق","403",0,174],["محمد عبد عبد القادر النجار","404",0,175],["محمد محمد احمد الطويل","405",0,176],["محمد عبدالرازق سعد عبدالرازق","406",0,177],["محمد ابو زيد ابو زيد مصطفى النجار","407",0,178],["ماجد محمود عبدالله حماد","408",0,179],["عبدالرحمن احمد احمد احمد فياض","409",0,180],["محمد الخولي عزت الخولي","410",0,181],["فتحي الداودي ابو المعاطي حماد","411",0,182],["مصطفى كامل عباس يوسف مصطفى","412",1,183],["محمد ناجي طلعت يوسف خميس","414",0,184],["احمد رشاد يوسف خميس","415",0,185],["محمد اشرف حندق البغدادي","416",0,186],["محمد صبري احمد احمد عبدالرازق","417",1,187],["ناجي ابو النور عبد العدل عبد العدل","419",0,188],["احمد اسعد عبد العزيز يونس","420",1,189],["صبري احمد احمد عبدالرازق","421",0,190],["حسين فهمي داود محمد عبد الجواد","424",0,191],["محمد محمد محمد الورداني","425",0,192],["ابراهيم ذكي ذكي عبدالرازق","426",0,193],["احمد سالم احمد عبد","427",1,194],["حسن محمد حسن حسن علي البويسي","428",0,195],["محمد علي عبد علي عبد المجيد","429",0,196],["ابراهيم محسن فؤاد محمد علي","430",1,197],["احمد سعد سعد عبدالرازق","431",0,198],["اسلام محمد سعد عبدالرازق","432",0,199],["عايده عبد المنعم عبده زهران","433",0,200],["عزه عوض محمد علي الفقي","434",0,201],["سعاد عوض حسن حسن بركات","435",0,202],["عبد الرحمن علي علي رياض","436",0,203],["ممدوح اشرف الشافعي خميس","437",0,204],["ماهر عوض ماهر خليل","438",0,205],["محمد عوض محمد علي الفقي","439",0,206],["احمد رضا داود محمد عبد الجواد","440",0,207],["محمد سعد سعد عبدالرازق","441",0,208],["محمد محمد سعد عبدالرازق","442",0,209],["الصبري محمود محمود عبدالرازق","443",0,210],["جمال رزق رزق رزق خليل","444",0,211],["صبري صابر السيد علي سليم","445",0,212],["سمير حسين حسين حسين سليم","446",0,213],["محمد ابراهيم خالد السيد احمد","447",0,214],["وليد رمضان محمد علي","448",0,215],["محمد رضا داود محمد","449",0,216],["احمد السيد صبيح عبدالرازق","450",0,217],["الجرايحي محمد ابراهيم عبدالرازق","451",0,218],["حمدي محمد السيد سليم","452",0,219],["ساره رضا داود محمد","453",0,220],["فاطمه عوض محمد علي الفقي","454",0,221],["رحاب عوض حسن حسن بركات","455",0,222],["ايمان عوض حسن حسن بركات","456",0,223],["سماح السيد صبيح عبدالرازق","457",0,224],["سهام احمد خليل احمد عتيبه","458",0,225],["هبه ابو النور عبد العدل عبد العدل","459",0,226],["احمد عبد الناصر عبد العزيز يونس","460",0,227],["محمد عبد الناصر عبد العزيز يونس","461",0,228],["فاطمه يحي حسن حسن","462",0,229],["جمال عثمان محمد عطا","463",0,230],["عوض محمد محمد عبد سالم","463",0,231],["رضا داود محمد عبد الجواد","465",0,232],["امال محمد التميمي عبدالرازق","466",0,233],["حسناء محمد عبد عبد القادر الديب","467",0,234],["حسام محمد التميمي عبدالرازق فياض","468",0,235],["محمد عوض فتحي محمد","469",0,236],["كريمه محمد محمد رشاد عيد حموده","470",0,237],["فاطمه الزهراء جمعه محمد دياب","471",0,238],["اجلال الوصيف احمد الوصيف","472",0,239],["مني محمد شلبي عبد الجواد","475",0,240],["حميده التميمي محمد داود عبدالرازق","476",0,241],["السيد محمد مسعد علي","477",0,242],["اسماء جابر العراقي محمد عبدالرازق","479",0,243],["محمد محمد عيسى عيسى الفقي","480",0,244],["جمال محمد محمد عبدالرحمن","481",0,245],["احمد كامل العراقي محمد","482",0,246],["محمد محمد محمد ابراهيم","483",0,247],["احمد حسني احمد ابو الخير","484",0,248],["دعاء يحي يحي حسن حسن السخري","485",0,249],["رحاب عباس عباس يوسف مصطفى","486",0,250],["حلمي صبيح عبدالرازق فياض","487",1,251],["احمد راشد احمد احمد","488",1,252],["احمد محمد محمد محمد سليم","489",0,253],["محمد ابراهيم محمد ابراهيم خليفه الشيخ","490",0,254],["محمد ابراهيم محمد عماره","491",0,255],["لمياء حسونه عبد عطا فراج","492",0,256],["بدر الصباح محمود عبدالرازق الغضبان","493",0,257],["دعاء محمد عبد عبد القادر","494",0,258],["حنان ممدوح مسعد السخري","495",0,259],["احمد ابو الفتوح عبد القادر مصطفى","496",0,260],["احمد عبد عبدالرازق محمد","497",0,261],["حمدي احمد محمد عماره","498",0,262],["السيد عوض السيد السيد الديب","499",0,263],["احمد العربي محمد السيد سليم","500",0,264],["امل محمود عبدالرازق محمد","501",0,265],["احمد ماهر مسعد محمد محمد الخولي","502",0,266],["امين علي عماره محمد عماره","503",0,267],["احمد احمد عبد محمد داود عبدالرازق","504",0,268],["السيد محمد ابراهيم عبدالرازق الفقي","505",0,269],["اشرف محمد ذكي عبد الجواد الموافي","506",1,270],["السيد نبيل ابراهيم خميس سليم","507",0,271],["فوزيه حسن انور عبده","508",0,272],["مروه زكريا حندق البغدادي","509",0,273],["رباب الدسوقي علي الدسوقي سليم","510",0,274],["سماء محمد عبد عبد القادر","511",0,275],["اشرف الشافعي خميس سليم","512",0,276],["السعيد السعيد سليمان عاشور","513",0,277],["محي الدين مصطفى مصطفى حسن","514",0,278],["ابراهيم حمدي محمد عبد العال","515",0,279],["محمد ابو النور عبد العدل عبد العدل","516",0,280],["نجلاء ابو النور عبد العدل عبد العدل","517",0,281],["زهره ابو النور عبدالعدل","518",0,282],["محمد محمد السيد سليم","519",0,283],["محمد سعد عبدالرازق الغضبان","520",0,284],["عبد الرحمن سعد سعد عبدالرازق","521",0,285],["علي علي محمد علي بدريه","522",0,286],["ابو الفتوح ابو الفتوح عبد القادر النجار","523",0,287],["حموده عبد الجواد احمد عبد الجواد","524",0,288],["ابراهيم مسعد الحسيني شلبي","525",0,289],["عوض عوض محمد علي الفقي","528",0,290],["صادق صادق توفيق موسى","545",0,291],["خالد عباس عباس يوسف","546",0,292],["محمود رجب محمود سمره الخولي","547",0,293],["احمد ابراهيم احمد فياض","548",0,294],["احمد حمدي احمد محمد عماره","549",0,295],["خالد محمود محمد علي رخا","550",0,296],["ابراهيم علي علي عبد","551",0,297],["محمد الداودي محمد علي بدريه","552",0,298],["سامح ابراهيم عبد السيد صالح","553",0,299],["السيد احمد حسني احمد ابو الخير","554",0,300],["احمد ابراهيم كمال رزق الموافي","555",0,301],["اميره يحي حسن السخري","556",0,302],["فريده يحي حسن حسن","557",0,303],["ايات رزق رزق رزق خليل","558",0,304],["احمد اشرف حندق البغدادي","559",0,305],["امير رضا داود محمد","560",0,306],["محمد محمد محمد سمره","561",0,307],["ابراهيم ابو السعود كامل الامام","562",0,308],["ايهاب مسعد عبد عبد القادر الديب","563",0,309],["نصر كامل كامل الامام","564",0,310],["جمعه محمد محمد دياب","565",0,311],["ماجده الصديق عوضين شحاته","566",0,312],["محمد ابو النور مسعد الامام","567",0,313],["ناصر مسعد محمد الخولي","568",0,314],["عبد مصطفى مصطفى عبده","569",0,315],["السيد محمد محمد السيد سالم","570",0,316],["محمد حسن محمد ابراهيم سليم","571",0,317],["نجلا ابراهيم ابراهيم العشري","572",0,318],["محمد رشاد محمد عبد القادر النجار","573",0,319],["السيد محمود محمود عبدالرازق","574",0,320],["رحاب رزق رزق رزق خليل","575",0,321],["حسن محمد ابو زيد النجار","576",0,322],["حسام احمد احمد المتولي","577",0,323],["ساره عبدالرازق سعد عبدالرازق","578",0,324],["محمد احمد زكي محمد محمد","579",0,325],["سعد احمد سعد عبدالرازق","580",0,326],["احمد ناجي طلعت يوسف خميس","581",0,327],["نورا جمعه محمد علي الضبان","582",0,328],["فاطمه التميمي محمد داود","583",0,329],["مسعد علي عبد الطويل","584",0,330],["رمضان ابراهيم عبدالرازق يوسف","585",0,331],["عبير فهمي عبدالرازق عبدالرازق يوسف","586",0,332],["محاسن توفيق توفيق موسى فياض","587",0,333],["علي ابو النور مسعد علي الفقي","588",0,334],["باسم اشرف الشافعي خميس","589",0,335],["محمد اشرف الشافعي خميس","590",0,336],["احمد السيد السيد عبدالرازق يوسف","591",0,337],["محمد علي علي علي الغضبان","592",0,338],["عبير محمد السيد احمد حموده","593",0,339],["هبه عبد محمد محمد السيد سالم","594",0,340],["هبه راغب القدوسي محمد هلال","595",0,341],["فاطمه سعد احمد محمد","596",0,342],["الامير بكر بكر احمد محمد عبدالرازق","597",0,343],["احمد ناصر علي علي الغضبان","598",0,344],["ناصر علي علي الغضبان","599",0,345],["محمد الداودي محمد محمد الامام","600",0,346],["مازن محمد علي محمد السي سالم","601",0,347],["صلاح عمان محمود محمد","602",0,348],["علي عبد علي عبد المجيد","603",0,349],["عماد عبد علي عبد المجيد","604",0,350],["جمال عبد الحق عبدالرازق","605",0,351],["جمعه ابو النور مسعد الامام","14",0,366],["جمال ابراهيم احمد النجار","19",0,368],["خاطر ابراهيم احمد النجار","39",0,370],["احمد محمد محمد النجار","69",1,369],["محمد عبد الرؤوف شلبي عبد الجواد","77",0,387],["احمد مسعد ابوالنور الامام","81",0,386],["اسامه مجاهد احمد عبد الرازق","82",0,378],["فادي ابراهيم ابراهيم سباع","85",0,384],["احمد عبد الرازق ذكى البويسي","95",0,385],["هاني محمد صالح شلبي","103",0,358],["اسامه ابراهيم ابو النور مسعد","114",0,381],["محمد صلاح مسعد الامام","115",0,380],["عماد ابراهيم مصطفي حليمه","116",0,388],["محمد محمد يوسف النحاس","128",0,389],["احمد المرسى فيهم يوسف","131",0,376],["محمد رافت محمد رزق","140",0,371],["صابر عماره عماره محمد","151",0,354],["محمد سعد محمد نصر","153",0,382],["مصطفي ناجى مصطفي النجار","155",0,383],["محمد الشحات شحاته مسعد","192",0,356],["السيد السيد عبده بدريه","193",0,357],["احمد سليمان محمد سليمان","197",0,390],["ابراهيم الحسيني مصطفي علي","241",0,359],["علي اسامه علي خليل","386",0,391],["اسلام عبدة عبد المجيد عبد الرازق","389",0,392],["عمر قدري محمد عبد القادر","392",0,379],["اسراء صبري احمد عبدالرازق","355",0,352],["سمر شلبى شلبى عبد الجواد","370",0,393],["صالح محمد الداودي محمد احمد","423",0,353],["وفيه سعد حسين سليم","473",0,394],["حمدين ممدوح عبدالوهاب محمد","526",0,395],["خالد راعي خليل ابراهيم رخا","527",0,360],["اسماء الشحات شحاته اسماعيل","529",0,396],["حامد حامد احمد البويسي","530",0,377],["شريهان حامد حامد احمد البويسي","531",0,372],["فاطمه صالح محمد فياض","533",0,373],["وفاء حامد احمد البويسي","535",0,375],["لمياء محمد ابراهيم العشري","536",0,374],["نرمين صلاح الدين ابراهيم السيد","537",0,397],["احمد حامد احمد البويسي","538",0,362],["صفاء مصطفي صبح جبر","539",0,363],["ياسر الفهمي السيد فرح","541",0,361],["نجلاء محمد ابراهيم العشري","542",0,364],["وفاء محمد ابراهيم العشري","543",0,365],["السيد السيد السلاموني الغريب","544",0,367],["احمد الدوادي نبيه المهدي","148",0,398],["ايمن نصر نصر حماد","162",0,399],["احمد خميس يوسف سليم","199",0,400],["احمد مصطفي السيد عيد","224",0,401],["ميادة طلبه يوسف فياض","285",0,402],["ايمان عاطف محمد النجار","294",0,403],["علي ابراهيم احمد فياض","63",0,355],["محمد ابو زيد ابو زيد محمد","120",0,404],["السيد عوض محمد داود","25",0,405],["محمد السعيد عبد السلام حموده","183",0,406],["محمد صلاح طه سليم","41",0,407],["وليد عبد عبد محمد عبد الجواد","159",0,408]];
+const MEMBER_NAMES = [], MEMBER_IDS = [], NAMES_2025 = [];
+let baseMembers = ROSTER.map((r, i) => ({ id: "m26_" + (r[3] !== undefined ? r[3] : i), name: r[0], year: "2025", no: r[1], crossed: r[2] === 1 })); // r[3] = المعرّف الأصلي للعضو (يحفظ التصويت والهاتف) — الترتيب الآن حسب كشف PDF
+let memberNoRaw = {};   // id -> رقم العضوية بعد التعديل (يُحفظ فى Firebase)
+let currentYear = "2025"; // "2024" | "2025" | "diff"
+let allByYear = { "2024": [], "2025": [] }, delByYear = { "2024": [], "2025": [] };
+let diffNew = [], diffGone = [];
+let extraRaw = {};    // id -> {name, addedBy, addedAt}  (members added manually)
+let namesRaw = {};    // id -> الاسم بعد التعديل (يُحفظ فى Firebase)
+let phonesRaw = {};   // id -> رقم الهاتف (يُحفظ فى Firebase)
+let deceasedRaw = {}; // id -> true (عضو متوفي)
+let deletedRaw = {};  // id -> true                       (soft-deleted members)
+let membersDataRaw = {}; // id -> {votes,status,manual,updatedBy,updatedAt}
+
+let members = [];      // active (non-deleted) members, rebuilt on every change
+let deletedMembers = []; // deleted members, for the "المحذوفون" tab
+let membersById = {};
+let similarGroups = []; // clusters of members with near-identical names
+
+function rebuildMembers(){
+  /* القائمة = أسماء كشف PDF النهائي فقط (409) — تُتجاهل الإضافات اليدوية القديمة المحفوظة فى Firebase */
+  const all = baseMembers.slice();
+  allByYear = { "2024": [], "2025": [] };
+  delByYear = { "2024": [], "2025": [] };
+  membersById = {};
+  const seq = { "2024": 0, "2025": 0 };
+  all.forEach(base => {
+    const d = membersDataRaw[base.id] || {};
+    const m = {
+      id: base.id, name: (namesRaw[base.id] || base.name), origName: base.name, year: base.year,
+      no: Object.prototype.hasOwnProperty.call(memberNoRaw, base.id) ? String(memberNoRaw[base.id] || "") : String(base.no || ""),
+      crossed: !!base.crossed,
+      deceased: !!deceasedRaw[base.id],
+      votes: d.votes || {},
+      status: d.status || null,
+      manual: !!d.manual,
+      updatedBy: d.updatedBy || null,
+      updatedAt: d.updatedAt || null
+    };
+    membersById[m.id] = m;
+    if(false){ /* لا حذف: كل أعضاء الكشف الـ 409 ظاهرون */
+      delByYear[m.year].push(m);
+    } else {
+      m.idx = ++seq[m.year];
+      allByYear[m.year].push(m);
+    }
+  });
+  applyView();
+}
+
+/* مفتاح المقارنة بين 2024 و 2025 (يتجاهل المسافات والهمزات) */
+function diffKey(s){ return normalizeArabicName(s).replace(/\s/g, ""); }
+
+/* مطابقة تقريبية واحد-لواحد بين 2024 و 2025 (خوارزمية المجرية) — الباقى من 2024 بدون مقابل فى 2025 */
+function hungarian(cost, n, m){ // n <= m ، يرجع لكل صف رقم العمود المطابق
+  const INF = 1e9, u = new Array(n+1).fill(0), v = new Array(m+1).fill(0), p = new Array(m+1).fill(0), way = new Array(m+1).fill(0);
+  for(let i = 1; i <= n; i++){
+    p[0] = i; let j0 = 0;
+    const minv = new Array(m+1).fill(INF), used = new Array(m+1).fill(false);
+    do{
+      used[j0] = true;
+      const i0 = p[j0]; let delta = INF, j1 = 0;
+      for(let j = 1; j <= m; j++) if(!used[j]){
+        const cur = cost[i0-1][j-1] - u[i0] - v[j];
+        if(cur < minv[j]){ minv[j] = cur; way[j] = j0; }
+        if(minv[j] < delta){ delta = minv[j]; j1 = j; }
+      }
+      for(let j = 0; j <= m; j++){
+        if(used[j]){ u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta;
+      }
+      j0 = j1;
+    } while(p[j0] !== 0);
+    do{ const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while(j0);
+  }
+  const res = new Array(n).fill(-1);
+  for(let j = 1; j <= m; j++) if(p[j]) res[p[j]-1] = j-1;
+  return res;
+}
+let _diffCache = { key: "", val: null };
+const GONE_MAX_COST = 0.45; // أعلى فرق مقبول بين اسمين حتى يُعتبرا نفس الشخص
+/* يرجع { gone: أسماء 2024 غير الموجودة فى 2025 , added: أسماء 2025 غير الموجودة فى 2024 } */
+function computeDiff(l24, l25){
+  const key = l24.map(m => m.id).join(",") + "|" + l25.map(m => m.id).join(",");
+  if(_diffCache.key === key) return _diffCache.val;
+  let gone = l24.slice(), added = l25.slice();
+  if(l24.length && l25.length){
+    const A = l24.map(m => diffKey(m.name)), B = l25.map(m => diffKey(m.name));
+    const c = (a, b) => levenshtein(a, b) / Math.max(a.length, b.length, 1);
+    const matched24 = new Set(), matched25 = new Set();
+    if(A.length <= B.length){
+      const cost = A.map(a => B.map(b => c(a, b)));
+      const asg = hungarian(cost, A.length, B.length);
+      asg.forEach((col, r) => { if(col >= 0 && cost[r][col] <= GONE_MAX_COST){ matched24.add(r); matched25.add(col); } });
+    } else {
+      const cost = B.map(b => A.map(a => c(a, b)));
+      const asg = hungarian(cost, B.length, A.length);
+      asg.forEach((col, r) => { if(col >= 0 && cost[r][col] <= GONE_MAX_COST){ matched25.add(r); matched24.add(col); } });
+    }
+    gone = l24.filter((_, i) => !matched24.has(i));
+    added = l25.filter((_, i) => !matched25.has(i));
+  }
+  _diffCache = { key: key, val: { gone: gone, added: added } };
+  return _diffCache.val;
+}
+
+function applyView(){
+  const df = computeDiff(allByYear["2024"], allByYear["2025"]);
+  diffNew = df.added;   // جدد فى 2025 — غير موجودين فى 2024
+  diffGone = df.gone;   // كانوا فى 2024 — غير موجودين فى 2025
+  if(currentYear === "diff"){
+    members = diffNew.concat(diffGone);
+    deletedMembers = [];
+    similarGroups = [];
+  } else {
+    members = allByYear[currentYear];
+    deletedMembers = delByYear[currentYear];
+    similarGroups = computeSimilarGroups(members);
+  }
+}
+
+function setYear(y){
+  currentYear = y;
+  document.querySelectorAll(".year-btn").forEach(b => b.classList.toggle("active", b.dataset.year === y));
+  applyView();
+  renderStats();
+  renderList();
+}
+
+function yearLabel(){ return "أعضاء الجمعية"; }
+
+
+/* ---- الأسماء المتشابهة ---- */
+function normalizeArabicName(s){
+  return s
+    .replace(/[\u064B-\u0652\u0670]/g, "")
+    .replace(/[إأآا]/g, "ا")
+    .replace(/[ة]/g, "ه")
+    .replace(/[ى]/g, "ي")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function levenshtein(a, b){
+  const al = a.length, bl = b.length;
+  if(al === 0) return bl;
+  if(bl === 0) return al;
+  const dp = new Array(bl + 1);
+  for(let j = 0; j <= bl; j++) dp[j] = j;
+  for(let i = 1; i <= al; i++){
+    let prev = dp[0];
+    dp[0] = i;
+    for(let j = 1; j <= bl; j++){
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  return dp[bl];
+}
+function computeSimilarGroups(list){
+  const n = list.length;
+  const norm = list.map(m => normalizeArabicName(m.name));
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(x){ while(parent[x] !== x){ parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  function union(a, b){ const ra = find(a), rb = find(b); if(ra !== rb) parent[ra] = rb; }
+  for(let i = 0; i < n; i++){
+    for(let j = i + 1; j < n; j++){
+      if(norm[i] === norm[j]){ union(i, j); continue; }
+      const maxLen = Math.max(norm[i].length, norm[j].length);
+      if(maxLen === 0) continue;
+      const dist = levenshtein(norm[i], norm[j]);
+      if(dist > 0 && dist <= 3 && (dist / maxLen) <= 0.18){
+        union(i, j);
+      }
+    }
+  }
+  const groupsMap = {};
+  for(let i = 0; i < n; i++){
+    const r = find(i);
+    (groupsMap[r] = groupsMap[r] || []).push(list[i]);
+  }
+  return Object.values(groupsMap).filter(g => g.length > 1);
+}
+
+let currentUser = null; // { name, key }
+let currentTab = "all";
+
+/* ================= Helpers ================= */
+function safeKey(name){
+  return name.replace(/[.#$\[\]\/\s]/g, "_");
+}
+function choiceLabel(c){
+  if(c === "with") return "معانا 100%";
+  if(c === "against") return "مش معانا 100%";
+  if(c === "unsure") return "مشكوك فى أمره";
+  if(c === "travel") return "مسافر";
+  return "غير مصنف";
+}
+
+/* ================= Login ================= */
+function initLoginSelect(){
+  const sel = document.getElementById("adminSelect");
+  ADMINS.forEach(a => {
+    const opt = document.createElement("option");
+    opt.value = a.name;
+    opt.textContent = a.name;
+    sel.appendChild(opt);
+  });
+}
+function doLogin(){
+  const name = document.getElementById("adminSelect").value;
+  const pass = document.getElementById("adminPass").value;
+  const admin = ADMINS.find(a => a.name === name);
+  const err = document.getElementById("loginError");
+  if(!admin || admin.pass !== pass){
+    err.style.display = "block";
+    return;
+  }
+  err.style.display = "none";
+  currentUser = { name: admin.name, key: safeKey(admin.name) };
+  localStorage.setItem("assembly_user", JSON.stringify(currentUser));
+  showApp();
+}
+function doLogout(){
+  currentUser = null;
+  localStorage.removeItem("assembly_user");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("adminPass").value = "";
+}
+function showApp(){
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("currentUserName").innerHTML = escapeHtml(currentUser.name) + (isSuper() ? '<span class="super-badge">صلاحية كاملة</span>' : '');
+  renderStats();
+  renderList();
+}
+
+/* ================= Firebase sync ================= */
+function attachListeners(){
+  db.ref(".info/connected").on("value", snap => {
+    const badge = document.getElementById("connBadge");
+    const text = document.getElementById("connText");
+    if(!badge) return;
+    if(snap.val() === true){
+      badge.className = "conn-badge live";
+      text.textContent = "متصل مباشر — يتحدث تلقائياً";
+    } else {
+      badge.className = "conn-badge offline";
+      text.textContent = "غير متصل، جارٍ إعادة المحاولة...";
+    }
+  });
+
+  db.ref(ROOT + "members").on("value", snap => {
+    membersDataRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
+  db.ref(ROOT + "memberNo").on("value", snap => {
+    memberNoRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
+  db.ref(ROOT + "names").on("value", snap => {
+    namesRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
+  db.ref(ROOT + "phones").on("value", snap => {
+    phonesRaw = snap.val() || {};
+    renderList();
+  });
+
+  db.ref(ROOT + "extra").on("value", snap => {
+    extraRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
+
+  db.ref(ROOT + "deceased").on("value", snap => {
+    deceasedRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
+  db.ref(ROOT + "deleted").on("value", snap => {
+    deletedRaw = snap.val() || {};
+    rebuildMembers();
+    renderStats();
+    renderList();
+  });
+
+  db.ref(ROOT + "logs").limitToLast(60).on("value", snap => {
+    const data = snap.val() || {};
+    const arr = Object.values(data).sort((a,b) => (b.ts||0) - (a.ts||0));
+    renderLog(arr);
+  });
+}
+
+function computeStatusFromVotes(votes){
+  const counts = { with: 0, against: 0, unsure: 0, travel: 0 };
+  Object.values(votes).forEach(v => { if(counts[v] !== undefined) counts[v]++; });
+  let winner = null;
+  ["with","against","unsure","travel"].forEach(k => {
+    if(counts[k] >= VOTE_THRESHOLD && (winner === null || counts[k] > counts[winner])) winner = k;
+  });
+  return { counts, winner };
+}
+
+function castVote(memberId, choice){
+  const m = membersById[memberId];
+  if(!m || !currentUser) return;
+  const uid = currentUser.key;
+  const sup = isSuper();
+  const ref = db.ref(ROOT + "members/" + memberId);
+  let prevStatus = null, finalStatus = null;
+
+  /* transaction: تقرأ أحدث نسخة من السيرفر وتضيف صوت هذا المستخدم فقط
+     فلا يمكن أن تمسح تصويت مستخدم آخر حتى لو صوّت الجميع فى نفس اللحظة */
+  ref.transaction(cur => {
+    cur = cur || {};
+    const votes = Object.assign({}, cur.votes || {});
+    votes[uid] = choice;
+    prevStatus = cur.status || null;
+    const out = Object.assign({}, cur, { votes: votes });
+    if(sup){
+      /* صلاحية كاملة: التصنيف يُحسم فوراً ويُقفل ولا تغيّره أصوات الآخرين */
+      finalStatus = choice;
+      out.status = choice;
+      out.manual = true;
+      if(choice !== prevStatus){
+        out.updatedBy = currentUser.name;
+        out.updatedAt = Date.now();
+      }
+    } else if(cur.manual && cur.status){
+      /* تصنيف مقفل من صاحب الصلاحية الكاملة */
+      finalStatus = cur.status;
+    } else {
+      const { winner } = computeStatusFromVotes(votes);
+      finalStatus = winner || cur.status || null;
+      out.manual = false;
+      if(finalStatus) out.status = finalStatus;
+      if(finalStatus && finalStatus !== prevStatus){
+        out.updatedBy = currentUser.name;
+        out.updatedAt = Date.now();
+      }
+    }
+    return out;
+  }, (err, committed) => {
+    if(err || !committed){
+      console.error("vote failed", err);
+      alert("تعذّر حفظ اختيارك، حاول مرة أخرى");
+      return;
+    }
+    if(sup){
+      addLog(`${currentUser.name} قام بتصنيف "${m.name}" مباشرةً (${choiceLabel(choice)})`);
+    } else {
+      addLog(`${currentUser.name} قام بالتصويت على "${m.name}" بـ (${choiceLabel(choice)})` +
+             (finalStatus && finalStatus !== prevStatus ? ` — وأصبحت حالته "${choiceLabel(finalStatus)}" تلقائياً` : ""));
+    }
+  }, true);
+}
+
+function clearStatus(memberId){
+  if(!isSuper()) return;
+  const m = membersById[memberId];
+  if(!m) return;
+  db.ref(ROOT + "members/" + memberId).update({
+    status: null,
+    manual: null,
+    updatedBy: currentUser.name,
+    updatedAt: Date.now()
+  });
+  addLog(`${currentUser.name} ألغى تصنيف "${m.name}"`);
+}
+
+function toggleDeceased(memberId){
+  if(!isSuper()) return;
+  const m = membersById[memberId];
+  if(!m) return;
+  if(m.deceased){
+    if(!confirm(`إلغاء حالة "متوفي" عن "${m.name}"؟`)) return;
+    db.ref(ROOT + "deceased/" + memberId).remove();
+    addLog(`${currentUser.name} ألغى حالة "متوفي" عن "${m.name}"`);
+  } else {
+    if(!confirm(`تحديد "${m.name}" كعضو متوفي؟`)) return;
+    db.ref(ROOT + "deceased/" + memberId).set(true);
+    addLog(`${currentUser.name} حدّد "${m.name}" كعضو متوفي`);
+  }
+}
+
+function manualSetStatus(memberId, status){
+  const m = membersById[memberId];
+  db.ref(ROOT + "members/" + memberId).update({
+    status: status,
+    manual: true,
+    updatedBy: currentUser.name,
+    updatedAt: Date.now()
+  });
+  addLog(`${currentUser.name} قام بتعديل حالة "${m.name}" يدوياً إلى "${choiceLabel(status)}"`);
+}
+
+function openAddModal(){
+  document.getElementById("addMemberInput").value = "";
+  document.getElementById("addMemberNo").value = "";
+  document.getElementById("addModal").classList.remove("hidden");
+  document.getElementById("addMemberInput").focus();
+}
+function closeAddModal(){
+  document.getElementById("addModal").classList.add("hidden");
+}
+function confirmAddMember(){
+  const name = document.getElementById("addMemberInput").value.trim();
+  if(!name) return;
+  const yr = currentYear === "diff" ? "2025" : currentYear;
+  const exists = allByYear[yr].some(m => m.name.trim() === name) || delByYear[yr].some(m => m.name.trim() === name);
+  if(exists){
+    alert(`"${name}" موجود بالفعل فى قائمة أعضاء الجمعية`);
+    return;
+  }
+  const pass = prompt(`لتأكيد إضافة "${name}" أدخل كلمة سر الإضافة:`);
+  if(pass === null) return;
+  if(pass !== "521988"){
+    alert("كلمة السر غير صحيحة، لم تتم الإضافة");
+    return;
+  }
+  const newRef = db.ref(ROOT + "extra").push();
+  const noVal = toEnDigits(document.getElementById("addMemberNo").value).trim().replace(/\D/g, "");
+  newRef.set({ name: name, year: yr, no: noVal, addedBy: currentUser.name, addedAt: Date.now() });
+  addLog(`${currentUser.name} أضاف عضو جديد للجمعية (${yr}): "${name}"`);
+  closeAddModal();
+}
+
+function deleteMember(memberId){
+  const m = membersById[memberId];
+  if(!m) return;
+  const pass = prompt(`لتأكيد حذف "${m.name}" أدخل كلمة سر الحذف:`);
+  if(pass === null) return;
+  if(pass !== "521988"){
+    alert("كلمة السر غير صحيحة، لم يتم الحذف");
+    return;
+  }
+  db.ref(ROOT + "deleted/" + memberId).set(true);
+  addLog(`${currentUser.name} قام بحذف "${m.name}" من الجمعية العمومية`);
+}
+
+function restoreMember(memberId){
+  const m = membersById[memberId];
+  if(!m) return;
+  db.ref(ROOT + "deleted/" + memberId).remove();
+  addLog(`${currentUser.name} قام باستعادة "${m.name}" إلى الجمعية العمومية`);
+}
+
+
+/* ================= رقم العضوية ================= */
+function toEnDigits(s){ return String(s == null ? "" : s).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)); }
+function memberNoCounts(){
+  const c = {};
+  Object.keys(membersById).forEach(id => { const m = membersById[id]; if(m.no && !deletedRaw[id]) c[m.no] = (c[m.no] || 0) + 1; });
+  return c;
+}
+function editMemberNo(memberId){
+  const m = membersById[memberId];
+  if(!m) return;
+  const v = prompt(`رقم العضوية لـ "${m.name}"\n(اتركه فارغاً لمسح الرقم)`, m.no || "");
+  if(v === null) return;
+  const val = toEnDigits(v).trim();
+  if(val && !/^\d{1,6}$/.test(val)){
+    alert("أدخل رقم عضوية صحيح (أرقام فقط)");
+    return;
+  }
+  db.ref(ROOT + "memberNo/" + memberId).set(val);
+  addLog(`${currentUser.name} ${val ? "عدّل" : "مسح"} رقم عضوية "${m.name}"${val ? " إلى " + val : ""}${m.no ? " (كان " + m.no + ")" : ""}`);
+}
+
+/* ================= تعديل الاسم ================= */
+function editMemberName(memberId){
+  const m = membersById[memberId];
+  if(!m) return;
+  const v = prompt("تعديل الاسم:", m.name);
+  if(v === null) return;
+  const val = v.replace(/\s+/g, " ").trim();
+  if(!val){ alert("الاسم لا يمكن أن يكون فارغاً"); return; }
+  if(val.length > 120){ alert("الاسم طويل جداً"); return; }
+  if(val === m.name) return;
+  if(val === m.origName) db.ref(ROOT + "names/" + memberId).remove();
+  else db.ref(ROOT + "names/" + memberId).set(val);
+  addLog(`${currentUser.name} عدّل الاسم من "${m.name}" إلى "${val}"`);
+}
+
+/* ================= رقم الهاتف ================= */
+/* يحوّل أى صيغة (01279934735 / +201279934735 / 00201279934735 / 1279934735) إلى صيغة دولية بدون + */
+function phoneIntl(raw){
+  let d = toEnDigits(raw).replace(/\D/g, "");
+  if(!d) return "";
+  if(d.startsWith("00")) d = d.slice(2);
+  else if(d.startsWith("0")) d = "20" + d.slice(1);
+  else if(/^1[0125]\d{8}$/.test(d)) d = "20" + d;
+  return d;
+}
+function editMemberPhone(memberId){
+  const m = membersById[memberId];
+  if(!m) return;
+  const old = phonesRaw[memberId] || "";
+  const v = prompt(`رقم هاتف "${m.name}"\nمثال: 01279934735\n(اتركه فارغاً لمسح الرقم)`, old);
+  if(v === null) return;
+  const clean = toEnDigits(v).replace(/[\s\-()]/g, "");
+  if(clean === ""){
+    if(!old) return;
+    db.ref(ROOT + "phones/" + memberId).remove();
+    addLog(`${currentUser.name} مسح رقم هاتف "${m.name}"`);
+    return;
+  }
+  const intl = phoneIntl(clean);
+  const okEgypt = /^201[0125]\d{8}$/.test(intl);
+  const okOther = /^\d{8,15}$/.test(intl) && !intl.startsWith("20");
+  if(!/^\+?\d+$/.test(clean) || !(okEgypt || okOther)){
+    alert("رقم الهاتف غير صحيح.\nمثال صحيح: 01279934735");
+    return;
+  }
+  db.ref(ROOT + "phones/" + memberId).set(clean);
+  addLog(`${currentUser.name} ${old ? "عدّل" : "أضاف"} رقم هاتف "${m.name}"`);
+}
+const ICON_CALL = '<svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg>';
+const ICON_WA = '<svg viewBox="0 0 24 24"><path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.1L2 22l5.05-1.6A9.9 9.9 0 1 0 12.04 2zm0 18.1c-1.5 0-2.95-.4-4.2-1.15l-.3-.18-3 .95.98-2.92-.2-.3A8.1 8.1 0 1 1 12.04 20.1zm4.45-6.05c-.24-.12-1.44-.71-1.66-.8-.22-.08-.39-.12-.55.12-.16.24-.63.8-.77.96-.14.16-.28.18-.52.06-.24-.12-1.02-.38-1.94-1.2-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.55-1.32-.75-1.8-.2-.47-.4-.4-.55-.41h-.47c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.1 3.64.57.25 1.02.4 1.37.5.58.18 1.1.16 1.51.1.46-.07 1.44-.59 1.64-1.16.2-.57.2-1.05.14-1.16-.06-.1-.22-.16-.46-.28z"/></svg>';
+const WA_MESSAGE = [
+"السلام عليكم ورحمة الله وبركاته 🌹",
+"",
+"نتمنى من الله دعم الشباب في انتخابات *مركز شباب الأحمدية* 🇪🇬💪",
+"ونعدكم جميعاً بتطوير مركز الشباب وجعله أفضل، ومكاناً مناسباً لشباب الأحمدية ولكل أهل الأحمدية 🏟️⚽✨",
+"",
+"🗳️ *موعد الانتخابات:*",
+"📅 يوم *الخميس*",
+"🗓️ التاريخ: *29/10/2026*",
+"",
+"✅ يرجى اختيار قائمة الشباب التالية:",
+"",
+"👑 *منصب الرئيس*",
+"▫️ محمد محمد العشري",
+"",
+"🤝 *منصب نائب الرئيس*",
+"▫️ يحيى يحيى النجار",
+"",
+"💰 *منصب أمين الصندوق*",
+"▫️ إسلام عبده عبد المجيد",
+"",
+"👥 *الأعضاء تحت السن*",
+"▫️ مصطفى الحسن أبو زيد",
+"▫️ علي أسامة علي خليل",
+"▫️ محمد أبو المعاطي حماد",
+"▫️ جمال جمال زكي",
+"▫️ شخص خامس من اختيارك",
+"",
+"⚠️ *تنويه:* لابد من اختيارك عدد *8 أشخاص* كي يكون صوتك صحيحاً، أقل من ذلك أو أكثر سيبطل صوتك للأسف ❌",
+"",
+"🤲 والله ولي التوفيق 🌟"
+].join("\n");
+function waLink(intl){ return "https://wa.me/" + intl + "?text=" + encodeURIComponent(WA_MESSAGE); }
+function phoneBtns(m){
+  const raw = phonesRaw[m.id];
+  if(!raw) return `<span class="m-phone"><button class="ph-btn ph-add" onclick="editMemberPhone('${m.id}')" title="إضافة رقم الهاتف">＋ رقم الهاتف</button></span>`;
+  const intl = phoneIntl(raw);
+  return `<span class="m-phone" dir="ltr">
+    <a class="ph-btn ph-call" href="tel:+${intl}" title="اتصال ${escapeHtml(raw)}" aria-label="اتصال">${ICON_CALL}</a>
+    <a class="ph-btn ph-wa" href="${waLink(intl)}" target="_blank" rel="noopener" title="إرسال رسالة الانتخابات على واتساب (${escapeHtml(raw)})" aria-label="واتساب">${ICON_WA}</a>
+    <button class="ph-btn ph-edit" onclick="editMemberPhone('${m.id}')" title="تعديل أو مسح الرقم (${escapeHtml(raw)})" aria-label="تعديل الرقم">✎</button>
+  </span>`;
+}
+
+function addLog(text){
+  db.ref(ROOT + "logs").push({
+    text: text,
+    by: currentUser.name,
+    ts: Date.now()
+  });
+}
+
+/* ================= Rendering ================= */
+function renderStats(){
+  const total = members.length;
+  const withC = members.filter(m => m.status === "with").length;
+  const againstC = members.filter(m => m.status === "against").length;
+  const unsureC = members.filter(m => m.status === "unsure").length;
+  const travelC = members.filter(m => m.status === "travel").length;
+  const pct = n => total ? Math.round((n/total)*1000)/10 : 0;
+
+  document.getElementById("statTotal").textContent = total;
+  document.getElementById("statWith").textContent = withC;
+  document.getElementById("statAgainst").textContent = againstC;
+  document.getElementById("statUnsure").textContent = unsureC;
+  document.getElementById("statTravel").textContent = travelC;
+  document.getElementById("pctWith").textContent = pct(withC) + "%";
+  document.getElementById("pctAgainst").textContent = pct(againstC) + "%";
+  document.getElementById("pctUnsure").textContent = pct(unsureC) + "%";
+  document.getElementById("pctTravel").textContent = pct(travelC) + "%";
+  document.getElementById("barWith").style.width = pct(withC) + "%";
+  document.getElementById("barAgainst").style.width = pct(againstC) + "%";
+  document.getElementById("barUnsure").style.width = pct(unsureC) + "%";
+  document.getElementById("barTravel").style.width = pct(travelC) + "%";
+
+  document.getElementById("statTotalLbl").textContent = "إجمالي " + yearLabel();
+  document.getElementById("cY2024").textContent = allByYear["2024"].length;
+  document.getElementById("cY2025").textContent = allByYear["2025"].length;
+  document.getElementById("cYdiff").textContent = diffNew.length + diffGone.length;
+  document.getElementById("cAll").textContent = total;
+  document.getElementById("cWith").textContent = withC;
+  document.getElementById("cAgainst").textContent = againstC;
+  document.getElementById("cUnsure").textContent = unsureC;
+  document.getElementById("cTravel").textContent = travelC;
+  document.getElementById("cNone").textContent = members.filter(m => !m.status).length;
+  document.getElementById("cDeleted").textContent = deletedMembers.length;
+  document.getElementById("cDeceased").textContent = members.filter(m => m.deceased).length;
+  document.getElementById("cSimilar").textContent = similarGroups.reduce((s, g) => s + g.length, 0);
+
+  const pendingCount = currentUser ? members.filter(m => !m.votes[currentUser.key]).length : 0;
+  document.getElementById("cPending").textContent = pendingCount;
+  document.getElementById("bnPendingDot").classList.toggle("show", pendingCount > 0);
+  const banner = document.getElementById("pendingBanner");
+  if(currentUser && pendingCount > 0){
+    banner.textContent = `لسه لك ${pendingCount} عضو لم تصوّت عليهم بعد — الأسماء المميزة باللون الفاتح فى القائمة أدناه.`;
+    banner.classList.add("show");
+  } else {
+    banner.classList.remove("show");
+  }
+}
+
+function renderLog(entries){
+  const wrap = document.getElementById("logList");
+  if(!entries.length){
+    wrap.innerHTML = '<div class="log-empty">لا توجد عمليات بعد</div>';
+    return;
+  }
+  wrap.innerHTML = entries.map(e => {
+    const d = new Date(e.ts || 0);
+    const time = d.toLocaleString("ar-EG", { hour: "2-digit", minute: "2-digit", day:"2-digit", month:"2-digit" });
+    return `<div class="log-item"><span>${escapeHtml(e.text||"")}</span><span class="t">${time}</span></div>`;
+  }).join("");
+}
+
+function setTab(tab){
+  currentTab = tab;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".bn-item").forEach(b => b.classList.toggle("active", b.dataset.nav === tab));
+  const act = document.querySelector(".tab-btn.active");
+  if(act && act.scrollIntoView){ try{ act.scrollIntoView({ block: "nearest", inline: "center" }); }catch(e){} }
+  renderList();
+}
+function toggleLog(){ document.getElementById("logPanel").classList.toggle("collapsed"); }
+function bottomNavGo(tab){
+  setTab(tab);
+  document.querySelector(".list-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function filteredMembers(){
+  const q = document.getElementById("searchBox").value.trim();
+  let list = currentTab === "deleted" ? deletedMembers : members;
+  if(currentTab === "none") list = list.filter(m => !m.status);
+  else if(currentTab === "pending") list = list.filter(m => !m.votes[currentUser.key]);
+  else if(currentTab === "similar") list = similarGroups.flat();
+  else if(currentTab === "deceased") list = list.filter(m => m.deceased);
+  else if(currentTab !== "all" && currentTab !== "deleted") list = list.filter(m => m.status === currentTab);
+  if(q){ const qn = toEnDigits(q); list = list.filter(m => m.name.includes(q) || (m.no && m.no === qn)); }
+  const pf = document.getElementById("phoneFilter") ? document.getElementById("phoneFilter").value : "all";
+  if(pf === "has") list = list.filter(m => !!phonesRaw[m.id]);
+  else if(pf === "none") list = list.filter(m => !phonesRaw[m.id]);
+  return list;
+}
+
+function noBadge(m){
+  const dup = m.no && (memberNoCounts()[m.no] || 0) > 1;
+  const txt = m.no ? "عضوية " + m.no : "＋ رقم العضوية";
+  return `<span class="m-no ${m.no ? "" : "empty"} ${dup ? "dup" : ""}" onclick="editMemberNo('${m.id}')" title="${dup ? "هذا الرقم مكرر — اضغط للتعديل" : "اضغط لإدخال أو تعديل رقم العضوية"}">${txt}${dup ? " ⚠" : ""}</span>${m.crossed ? ' <span class="m-no x" title="مشطوب فى كشف الجمعية">مشطوب</span>' : ""}`;
+}
+function memberRowHtml(m){
+  const counts = computeStatusFromVotes(m.votes).counts;
+  const mine = m.votes[currentUser.key];
+  const statusClass = m.status || "none";
+  return `
+    <div class="member-row ${mine ? '' : 'not-voted'} ${m.status === 'travel' ? 'is-travel' : ''} ${m.deceased ? 'is-deceased' : ''}">
+      <span class="m-idx">${m.idx}</span>
+      <span class="m-name">${escapeHtml(m.name)}${m.deceased ? '<span class="m-dead-tag">متوفي</span>' : ''}<button class="name-edit" onclick="editMemberName('${m.id}')" title="تعديل الاسم">✏ تعديل الاسم</button> ${noBadge(m)}${phoneBtns(m)}</span>
+      <span class="m-status ${statusClass}">${choiceLabel(m.status)}</span>
+      <span class="m-votes">م:${counts.with} · ض:${counts.against} · ش:${counts.unsure} · س:${counts.travel}</span>
+      <span class="m-actions">
+        <span class="vote-wrap"><span class="vote-count">${counts.with}</span><button class="vote-btn with ${mine==='with'?'mine':''}" onclick="castVote('${m.id}','with')">معانا 100%</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.against}</span><button class="vote-btn against ${mine==='against'?'mine':''}" onclick="castVote('${m.id}','against')">مش معانا 100%</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.unsure}</span><button class="vote-btn unsure ${mine==='unsure'?'mine':''}" onclick="castVote('${m.id}','unsure')">مشكوك فى أمره</button></span>
+        <span class="vote-wrap"><span class="vote-count">${counts.travel}</span><button class="vote-btn travel ${mine==='travel'?'mine':''}" onclick="castVote('${m.id}','travel')">مسافر</button></span>
+        ${isSuper() ? `<span class="admin-row"><button class="vote-btn clear" onclick="clearStatus('${m.id}')">إلغاء التصنيف</button><button class="vote-btn dead ${m.deceased ? 'mine' : ''}" onclick="toggleDeceased('${m.id}')">${m.deceased ? 'إلغاء الوفاة' : 'متوفي'}</button></span>` : ''}
+        <button class="vote-btn danger" onclick="deleteMember('${m.id}')">حذف</button>
+      </span>
+    </div>`;
+}
+
+function renderList(){
+  if(!currentUser) return;
+  const wrap = document.getElementById("listWrap");
+
+  if(currentYear === "diff" && currentTab !== "deleted" && currentTab !== "similar"){
+    const l = filteredMembers();
+    const secs = [
+      ["جدد فى 2025 — غير موجودين فى قائمة 2024", l.filter(m => m.year === "2025")],
+      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", l.filter(m => m.year === "2024")]
+    ];
+    wrap.innerHTML = secs.map(([t, arr]) => `
+      <div class="similar-group">
+        <div class="similar-group-title">${t} (${arr.length})</div>
+        ${arr.length ? arr.map((m, i) => memberRowHtml(Object.assign({}, m, { idx: i + 1 }))).join("") : '<div class="empty-list">لا يوجد</div>'}
+      </div>`).join("");
+    return;
+  }
+
+  if(currentTab === "similar"){
+    const q = document.getElementById("searchBox").value.trim();
+    let groups = similarGroups;
+    if(q) groups = groups.map(g => g.filter(m => m.name.includes(q))).filter(g => g.length > 1);
+    if(!groups.length){
+      wrap.innerHTML = '<div class="empty-list">لا توجد أسماء متشابهة فى الوقت الحالي</div>';
+      return;
+    }
+    wrap.innerHTML = groups.map((g, gi) => `
+      <div class="similar-group">
+        <div class="similar-group-title">مجموعة تشابه ${gi + 1} — ${g.length} أسماء متقاربة</div>
+        ${g.map(memberRowHtml).join("")}
+      </div>`).join("");
+    return;
+  }
+
+  const list = filteredMembers();
+  if(!list.length){
+    wrap.innerHTML = '<div class="empty-list">لا يوجد أعضاء فى هذه القائمة</div>';
+    return;
+  }
+  if(currentTab === "deleted"){
+    wrap.innerHTML = list.map((m, i) => `
+    <div class="member-row">
+      <span class="m-idx">${i+1}</span>
+      <span class="m-name">${escapeHtml(m.name)}<button class="name-edit" onclick="editMemberName('${m.id}')" title="تعديل الاسم">✏ تعديل الاسم</button> ${noBadge(m)}${phoneBtns(m)}</span>
+      <span class="m-actions">
+        <button class="vote-btn" onclick="restoreMember('${m.id}')">استعادة العضو</button>
+      </span>
+    </div>`).join("");
+    return;
+  }
+  wrap.innerHTML = list.map(memberRowHtml).join("");
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ================= Print ================= */
+const TAB_TITLES = {
+  all: "كل أعضاء الجمعية العمومية",
+  with: "قائمة الأعضاء المؤيدين (معانا 100%)",
+  against: "قائمة الأعضاء المعارضين (مش معانا 100%)",
+  unsure: "قائمة الأعضاء المشكوك فى أمرهم",
+  travel: "قائمة الأعضاء المسافرين",
+  none: "قائمة الأعضاء غير المصنفين",
+  pending: "الأعضاء الذين لم يصوّت عليهم",
+  deleted: "قائمة الأعضاء المحذوفين",
+  similar: "الأسماء المتشابهة",
+  deceased: "قائمة الأعضاء المتوفين"
+};
+/* ---- عناصر القائمة (فى تبويب الفرق: عنوان لكل قسم) ---- */
+function buildItems(list){
+  const items = [];
+  if(currentYear === "diff" && currentTab !== "deleted" && currentTab !== "similar"){
+    [
+      ["جدد فى 2025 — غير موجودين فى قائمة 2024", list.filter(m => m.year === "2025")],
+      ["كانوا فى 2024 — غير موجودين فى قائمة 2025", list.filter(m => m.year === "2024")]
+    ].forEach(([t, arr]) => {
+      items.push({ sec: t + " (" + arr.length + ")" });
+      if(!arr.length) items.push({ empty: true });
+      arr.forEach((m, i) => items.push({ m: m, n: i + 1 }));
+    });
+  } else {
+    list.forEach((m, i) => items.push({ m: m, n: i + 1 }));
+  }
+  return items;
+}
+
+/* ---- تقسيم الصفحات: حد أقصى 7 ورقات — لو القائمة كبيرة يصغّر ارتفاع الصف ليكفى ---- */
+const MAX_PAGES = 7;
+function planPages(items, availFirst, FIRST, REST){
+  const pages = [];
+  if(items.length <= FIRST + REST * (MAX_PAGES - 1)){
+    for(let k = 0, cap = FIRST; k < items.length; ){ pages.push(items.slice(k, k + cap)); k += cap; cap = REST; }
+    return { pages: pages, rh: 28, fs: 12 };
+  }
+  const r = Math.ceil(items.length / MAX_PAGES);
+  for(let k = 0; k < items.length; k += r) pages.push(items.slice(k, k + r));
+  const rh = Math.max(10, Math.floor(availFirst / (r + 1)));
+  return { pages: pages, rh: rh, fs: Math.max(7, Math.min(12, rh - 5)) };
+}
+
+/* ---- جدول صفحة واحدة (مشترك بين الطباعة والـ PDF) ---- */
+function tableHtml(rows, rh, fs){
+  const cell = `border:1px solid #999;padding:0 8px;height:${rh}px;line-height:1;text-align:right;font-size:${fs}px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;box-sizing:border-box;color:#000;`;
+  const th = `border:1px solid #999;background:#eee;padding:0 8px;height:${rh}px;line-height:1;text-align:right;font-size:${fs}px;font-weight:800;box-sizing:border-box;color:#000;`;
+  const rowHtml = it => {
+    if(it.sec) return `<tr><td colspan="3" style="${cell}background:#dfe9e5;font-weight:800;color:#123c34;">${escapeHtml(it.sec)}</td></tr>`;
+    if(it.empty) return `<tr><td colspan="3" style="${cell}color:#666;text-align:center;">لا يوجد</td></tr>`;
+    const m = it.m;
+    let st = "";
+    if(m.deceased) st = "background:#ffd6d6;color:#7a1010;font-weight:700;";
+    else if(m.status === "travel") st = "background:#dbeafe;color:#1d4ed8;font-weight:700;";
+    const nm = escapeHtml(m.name) + (m.deceased ? " — متوفي" : "");
+    return `<tr><td style="${cell}${st}">${it.n}</td><td style="${cell}${st}">${nm}</td><td style="${cell}${st}">${escapeHtml(m.no || "-")}</td></tr>`;
+  };
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;direction:rtl;">
+    <colgroup><col style="width:44px"><col><col style="width:110px"></colgroup>
+    <thead><tr><th style="${th}">م</th><th style="${th}">اسم العضو</th><th style="${th}">رقم العضوية</th></tr></thead>
+    <tbody>${rows.map(rowHtml).join("")}</tbody>
+  </table>`;
+}
+
+function printCurrentList(){
+  const list = filteredMembers();
+  if(!list.length){ alert("لا يوجد أعضاء فى هذه القائمة لطباعتها"); return; }
+  const area = document.getElementById("printArea");
+  const host = document.getElementById("printPages");
+  document.getElementById("printTitle").textContent = (TAB_TITLES[currentTab] || "قائمة الأعضاء") + " — " + yearLabel();
+  document.getElementById("printSub").textContent =
+    "مركز شباب الأحمدية — العدد: " + list.length + " — تاريخ الطباعة: " + new Date().toLocaleDateString("ar-EG");
+
+  const items = buildItems(list);
+  const plan = planPages(items, 920, 30, 34);
+  let rh = plan.rh, fs = plan.fs;
+  const draw = () => { host.innerHTML = plan.pages.map(rows => `<div class="p-page">${tableHtml(rows, rh, fs)}</div>`).join(""); };
+
+  /* معايرة: قياس الصفحة الأولى (بها العنوان) والتأكد أنها تتسع فى ورقة A4 */
+  area.classList.add("measuring");
+  draw();
+  for(let t = 0; t < 16; t++){
+    const tb = host.querySelector("table");
+    const bottom = tb.getBoundingClientRect().bottom - area.getBoundingClientRect().top;
+    if(bottom <= 1000 || rh <= 9) break;
+    rh--; fs = Math.max(7, Math.min(12, rh - 5)); draw();
+  }
+  area.classList.remove("measuring");
+  window.print();
+}
+
+async function exportCurrentPdf(){
+  if(typeof html2canvas === "undefined" || !(window.jspdf && window.jspdf.jsPDF)){
+    alert("مكتبة PDF لم تُحمَّل بعد، تأكد من الاتصال بالإنترنت وحاول مرة أخرى");
+    return;
+  }
+  const list = filteredMembers();
+  if(!list.length){ alert("لا يوجد أعضاء فى هذه القائمة لتصديرها"); return; }
+
+  const title = (TAB_TITLES[currentTab] || "قائمة الأعضاء") + " — " + yearLabel();
+  const dateStr = new Date().toLocaleDateString("ar-EG");
+  const sub = "مركز شباب الأحمدية — العدد: " + list.length + " — التاريخ: " + dateStr;
+
+  const items = buildItems(list);
+  const plan = planPages(items, 930, 24, 33); // صفحة A4 = 794×1123 بكسل
+  const pages = plan.pages;
+  let rh = plan.rh, fs = plan.fs;
+
+  const pageHtml = (rows, pi) => `
+    <div dir="rtl" style="position:relative;width:794px;height:1123px;background:#fff;color:#000;font-family:'Cairo',sans-serif;direction:rtl;padding:36px 40px;box-sizing:border-box;overflow:hidden;">
+      ${pi === 0 ? `<h2 style="text-align:center;margin:0 0 4px;font-size:19px;line-height:1.5;">${escapeHtml(title)}</h2><p style="text-align:center;color:#333;font-size:12px;margin:0 0 14px;line-height:1.5;">${escapeHtml(sub)}</p>` : ""}
+      ${tableHtml(rows, rh, fs)}
+      <div style="position:absolute;left:40px;right:40px;bottom:20px;display:flex;justify-content:space-between;font-size:11px;color:#444;">
+        <span>مركز شباب الأحمدية — برمجة وتطوير م/ محمد حماد</span>
+        <span>صفحة ${pi + 1} من ${pages.length}</span>
+      </div>
+    </div>`;
+
+  const btn = document.getElementById("pdfBtn");
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  const stage = document.createElement("div");
+  stage.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;pointer-events:none;";
+  document.body.appendChild(stage);
+  try{
+    if(document.fonts && document.fonts.load){ try{ await document.fonts.load("700 12px Cairo"); await document.fonts.ready; }catch(e){} }
+
+    /* معايرة على الصفحة الأولى (الأطول بسبب العنوان) لضمان عدم قص الصفوف */
+    for(let t = 0; t < 16; t++){
+      stage.innerHTML = pageHtml(pages[0], 0);
+      const pg = stage.firstElementChild;
+      const bottom = pg.querySelector("table").getBoundingClientRect().bottom - pg.getBoundingClientRect().top;
+      if(bottom <= 1075 || rh <= 9) break;
+      rh--; fs = Math.max(7, Math.min(12, rh - 5));
+    }
+
+    const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+    for(let pi = 0; pi < pages.length; pi++){
+      btn.textContent = "جارٍ التصدير " + (pi + 1) + "/" + pages.length;
+      stage.innerHTML = pageHtml(pages[pi], pi);
+      const canvas = await html2canvas(stage.firstElementChild, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+      if(pi > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
+      canvas.width = canvas.height = 0; // تحرير الذاكرة على الهاتف
+      await new Promise(r => setTimeout(r, 0));
+    }
+    pdf.save(title.replace(/[\\/:*?"<>|]/g, "-") + ".pdf");
+  }catch(e){
+    console.error(e);
+    alert("تعذر إنشاء ملف PDF، حاول مرة أخرى");
+  }finally{
+    stage.remove();
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+}
+
+/* ================= Boot ================= */
+if(window.matchMedia && window.matchMedia("(max-width:720px)").matches){
+  document.getElementById("logPanel").classList.add("collapsed");
+}
+initLoginSelect();
+attachListeners();
+
+const savedUser = localStorage.getItem("assembly_user");
+if(savedUser){
+  try{
+    currentUser = JSON.parse(savedUser);
+    showApp();
+  }catch(e){}
+}
+</script>
+</body>
+</html>
