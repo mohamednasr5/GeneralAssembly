@@ -8,6 +8,8 @@
 <title>تسجيل حضور الانتخابات - مركز شباب الأحمدية</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
@@ -139,6 +141,32 @@ main{max-width:680px;margin:0 auto;padding:16px 14px 0;}
 @keyframes dashGlow{0%,100%{box-shadow:0 0 0 0 rgba(31,157,98,.55),0 2px 10px rgba(18,60,52,.07);}50%{box-shadow:0 0 0 7px rgba(31,157,98,.25),0 0 26px rgba(31,157,98,.6);}}
 @media (prefers-reduced-motion:reduce){.valid,.dash.ok,.top .live b.ok{animation:none}}
 @media (prefers-reduced-motion:reduce){.mic.listening::after{animation:none}.fill,.vs i{transition:none}}
+
+.exp{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.exp button{border:2px solid var(--primary);border-radius:12px;padding:11px 6px;font-size:14px;font-weight:800;cursor:pointer;background:var(--primary);color:#fff;}
+.exp button.alt{background:#fff;color:var(--primary);}
+.exp button:disabled{opacity:.6;cursor:wait;}
+#rpHost{position:fixed;left:-10000px;top:0;pointer-events:none;}
+.rp{width:794px;height:1123px;padding:36px 40px;background:#fff;direction:rtl;font-family:'Cairo',Tahoma,Arial,sans-serif;color:#20241f;position:relative;overflow:hidden;box-sizing:border-box;}
+.rp *{letter-spacing:0;box-sizing:border-box;}
+.rp .hd{height:84px;background:#123c34;color:#fff;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:12px;}
+.rp .hd b{font-size:24px;font-weight:800;line-height:1.5;} .rp .hd span{font-size:13px;color:#c9dcd6;line-height:1.5;}
+.rp .ft{position:absolute;left:40px;right:40px;bottom:22px;display:flex;justify-content:space-between;font-size:11px;color:#6b7268;border-top:1px solid #e2ded3;padding-top:6px;}
+.rp .sm{height:279px;}
+.rp .vb{height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;margin-bottom:12px;}
+.rp .vb.ok{background:#1f9d62;} .rp .vb.no{background:#b3403f;}
+.rp .bx4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.rp .bx4 div{height:84px;border-radius:12px;text-align:center;padding-top:8px;}
+.rp .bx4 small{display:block;font-size:12.5px;font-weight:700;line-height:1.5;} .rp .bx4 b{display:block;font-size:34px;font-weight:900;line-height:1.2;}
+.rp .c1{background:#123c34;color:#fff;} .rp .c2{background:#c8992f;color:#2a1f00;} .rp .c3{background:#b3403f;color:#fff;} .rp .c4{background:#eee9dc;color:#20241f;}
+.rp .ln{font-size:14px;font-weight:700;line-height:30px;height:30px;} .rp .ln.m{color:#6b7268;font-weight:600;}
+.rp .tt{height:62px;display:flex;align-items:flex-end;padding-bottom:6px;font-size:19px;font-weight:800;}
+.rp .tt span{padding:4px 14px;border-radius:999px;color:#fff;line-height:1.5;}
+.rp .r{height:31px;display:flex;align-items:center;border-bottom:1px solid #eee9dc;font-size:14px;font-weight:600;white-space:nowrap;}
+.rp .r.h{background:#f1eee4;font-weight:800;font-size:12.5px;color:#6b7268;border-radius:6px;border-bottom:0;}
+.rp .r:nth-child(even):not(.h){background:#faf9f5;}
+.rp .r .a{width:42px;text-align:center;flex:none;} .rp .r .b{flex:1;overflow:hidden;padding:0 6px;} .rp .r .c{width:84px;text-align:center;flex:none;} .rp .r .d{width:92px;text-align:center;flex:none;} .rp .r .e{width:104px;text-align:center;flex:none;font-weight:800;}
+.rp .e.us{color:#9c7416;} .rp .e.them{color:#b3403f;} .rp .e.none{color:#6b7268;}
 </style>
 </head>
 <body>
@@ -182,6 +210,10 @@ main{max-width:680px;margin:0 auto;padding:16px 14px 0;}
 
   <section class="lst">
     <h2>قائمة الحاضرين (<span id="lstN">0</span>)</h2>
+    <div class="exp">
+      <button id="pdfAll">📄 تصدير التقرير الكامل PDF</button>
+      <button id="pdfTab" class="alt">📄 تصدير القائمة المعروضة</button>
+    </div>
     <div class="tabs" id="tabs">
       <button data-t="all" class="on">الكل</button>
       <button data-t="us">لنا</button>
@@ -189,6 +221,7 @@ main{max-width:680px;margin:0 auto;padding:16px 14px 0;}
       <button data-t="none">بدون ترجيح</button>
     </div>
     <div id="lstBody"></div>
+    <div id="rpHost"></div>
   </section>
 
   <button class="danger" id="resetBtn">🗑️ مسح كل الإدخالات وتصفيرها</button>
@@ -513,7 +546,9 @@ function renderList(){
     const l = leanOf(m);
     return `<div class="li" data-seq="${m.seq}"><span class="no">${m.seq}</span><span class="nm">${esc(m.name)}</span><span class="st ${l||"none"}">${l==="us"?"لنا":l==="them"?"للآخرين":"بدون ترجيح"}</span></div>`;
   }).join("") : `<div class="noitems">لا يوجد حاضرون في هذا التصنيف</div>`;
-  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on", b.dataset.t===listTab));
+  const cnt = {all:eligible.length, us:eligible.filter(m=>leanOf(m)==="us").length, them:eligible.filter(m=>leanOf(m)==="them").length, none:eligible.filter(m=>!leanOf(m)).length};
+  const lab = {all:"الكل", us:"لنا", them:"للآخرين", none:"بدون ترجيح"};
+  document.querySelectorAll("#tabs button").forEach(b=>{ b.classList.toggle("on", b.dataset.t===listTab); b.textContent = lab[b.dataset.t]+" ("+cnt[b.dataset.t]+")"; });
 }
 $("tabs").addEventListener("click", e=>{ const b=e.target.closest("button"); if(!b) return; listTab=b.dataset.t; renderList(); });
 $("lstBody").addEventListener("click", e=>{
@@ -530,6 +565,79 @@ $("resetBtn").onclick = ()=>{
   attRef.remove().then(()=>{ attRaw = {}; stats(); run(); renderList(); toast("تم مسح كل الإدخالات وتصفير العدّادات"); })
     .catch(()=>alert("تعذر المسح، تحقق من الاتصال"));
 };
+
+/* ===== تصدير PDF ===== */
+function reportSections(keys){
+  const el = DB.filter(m=>!blocked(m) && isAtt(m)).sort((a,b)=>a.seq-b.seq);
+  const all = {all:{title:"كل الحاضرين", color:"#123c34", rows:el, lean:true},
+    us:{title:"المرجّحون لنا", color:"#c8992f", rows:el.filter(m=>leanOf(m)==="us")},
+    them:{title:"المرجّحون للآخرين", color:"#b3403f", rows:el.filter(m=>leanOf(m)==="them")},
+    none:{title:"حاضرون بدون ترجيح", color:"#6b7268", rows:el.filter(m=>!leanOf(m))}};
+  return keys.map(k=>all[k]).filter(x=>x.rows.length);
+}
+function reportStats(){
+  const el = DB.filter(m=>!blocked(m));
+  const at = el.filter(isAtt), us = at.filter(m=>leanOf(m)==="us").length, them = at.filter(m=>leanOf(m)==="them").length;
+  return {elig:el.length, att:at.length, us, them, none:at.length-us-them};
+}
+function rowHTML(m,i,sec){
+  const l = leanOf(m);
+  return `<div class="r"><span class="a">${i}</span><span class="b">${esc(m.name)}</span><span class="c">${m.seq}</span><span class="d">${m.no?esc(m.no):"—"}</span>${sec.lean?`<span class="e ${l||"none"}">${l==="us"?"لنا":l==="them"?"للآخرين":"بدون ترجيح"}</span>`:""}</div>`;
+}
+function headRow(sec){ return `<div class="r h"><span class="a">م</span><span class="b">الاسم</span><span class="c">رقم الكشف</span><span class="d">رقم العضوية</span>${sec.lean?'<span class="e">الترجيح</span>':""}</div>`; }
+function summaryHTML(){
+  const t = reportStats(), lean = t.us+t.them;
+  const pu = lean ? (t.us/lean*100).toFixed(1) : "0.0", pt = lean ? (t.them/lean*100).toFixed(1) : "0.0";
+  const ok = t.att >= GOAL;
+  const lead = !lean ? "لا توجد ترجيحات بعد" : t.us>t.them ? "الفائز حتى الآن: نحن ("+pu+"%)" : t.them>t.us ? "الفائز حتى الآن: الآخرون ("+pt+"%)" : "تعادل بين الطرفين";
+  return `<div class="sm"><div class="vb ${ok?"ok":"no"}">${ok?"✅ الانتخابات صحيحة — تم الوصول للنصاب ("+GOAL+")":"لم يكتمل النصاب بعد — باقي "+(GOAL-t.att)+" من "+GOAL}</div>
+   <div class="bx4"><div class="c1"><small>إجمالي الحضور</small><b>${t.att}</b></div><div class="c2"><small>مرجّحون لنا (${pu}%)</small><b>${t.us}</b></div><div class="c3"><small>مرجّحون للآخرين (${pt}%)</small><b>${t.them}</b></div><div class="c4"><small>بدون ترجيح</small><b>${t.none}</b></div></div>
+   <div class="ln">${lead}${lean?" — الفارق "+Math.abs(t.us-t.them)+" صوت":""}</div>
+   <div class="ln m">عدد الأعضاء بعد تصفية المسافرين والمتوفين: ${t.elig} — نسبة الحضور ${(t.elig?t.att/t.elig*100:0).toFixed(1)}%</div></div>`;
+}
+function paginate(secs, withSum){
+  const CAP = 27, pages = []; let cur = {h:[],u:0};
+  const np = ()=>{ pages.push(cur); cur = {h:[],u:0}; };
+  if(withSum){ cur.h.push(summaryHTML()); cur.u = 9; }
+  secs.forEach(sec=>{
+    if(cur.u + 2 + 1 + Math.min(3,sec.rows.length) > CAP) np();
+    cur.h.push(`<div class="tt"><span style="background:${sec.color}">${sec.title} (${sec.rows.length})</span></div>`); cur.u += 2;
+    cur.h.push(headRow(sec)); cur.u += 1;
+    sec.rows.forEach((m,i)=>{
+      if(cur.u + 1 > CAP){ np(); cur.h.push(`<div class="tt" style="height:34px"><span style="background:${sec.color};font-size:14px">${sec.title} — تابع</span></div>`); cur.u += 1; cur.h.push(headRow(sec)); cur.u += 1; }
+      cur.h.push(rowHTML(m,i+1,sec)); cur.u += 1;
+    });
+    cur.u += 0.5;
+  });
+  pages.push(cur);
+  return pages;
+}
+let pdfBusy = false;
+async function exportPdf(keys, withSum, btn){
+  if(pdfBusy) return;
+  if(!window.html2canvas || !window.jspdf){ alert("تعذر تحميل مكتبة PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة"); return; }
+  const secs = reportSections(keys);
+  if(!secs.length && !withSum){ toast("لا توجد أسماء في هذه القائمة"); return; }
+  pdfBusy = true; const old = btn.textContent; btn.disabled = true; btn.textContent = "⏳ جارٍ تجهيز الملف…";
+  try{
+    try{ await document.fonts.load("800 20px Cairo"); await document.fonts.load("600 14px Cairo"); await document.fonts.ready; }catch(e){}
+    const pages = paginate(secs, withSum), host = $("rpHost"), n = pages.length;
+    const when = new Date().toLocaleString("ar-EG",{dateStyle:"full",timeStyle:"short"});
+    const pdf = new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"p"});
+    for(let i=0;i<n;i++){
+      host.innerHTML = `<div class="rp" id="rpPage"><div class="hd"><b>تقرير حضور انتخابات مجلس الإدارة</b><span>مركز شباب الأحمدية — ${when}</span></div>${pages[i].h.join("")}<div class="ft"><span>صفحة ${i+1} من ${n}</span><span>برمجة وتطوير المهندس / محمد حماد</span></div></div>`;
+      const cv = await html2canvas($("rpPage"),{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false});
+      if(i) pdf.addPage();
+      pdf.addImage(cv.toDataURL("image/jpeg",0.92),"JPEG",0,0,210,297);
+    }
+    host.innerHTML = "";
+    pdf.save("attendance-"+(withSum?"report":keys[0])+"-"+new Date().toISOString().slice(0,10)+".pdf");
+    toast("✅ تم تجهيز ملف PDF");
+  }catch(e){ console.error(e); alert("حدث خطأ أثناء إنشاء الملف، حاول مرة أخرى"); }
+  pdfBusy = false; btn.disabled = false; btn.textContent = old;
+}
+$("pdfAll").onclick = e=>exportPdf(["all","us","them","none"], true, e.currentTarget);
+$("pdfTab").onclick = e=>exportPdf([listTab], false, e.currentTarget);
 
 /* ===== البحث الصوتي ===== */
 /* كلمات يضيفها المتكلم ولا تدخل فى الاسم */
