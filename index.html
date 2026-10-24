@@ -124,6 +124,39 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
 @keyframes draw{0%,6%{stroke-dashoffset:14;}30%,88%{stroke-dashoffset:0;}100%{stroke-dashoffset:14;}}
 @keyframes drop{0%,100%{transform:translateY(-1.2px);}50%{transform:translateY(1.2px);}}
 
+
+/* ---------- كارت كاميرا المراقبة ---------- */
+.t4{--c1:#4a5d7e;--c2:#141c2e;--glow:rgba(110,160,255,.5);}
+.a-cam svg .rec{fill:#ff2a2a;stroke:none;filter:drop-shadow(0 0 4px #ff2a2a);animation:recBlink 1.2s steps(1,end) infinite;}
+@keyframes recBlink{0%,55%{opacity:1;}56%,100%{opacity:0;}}
+.a-cam svg .cambody{animation:camPan 6s ease-in-out infinite;transform-origin:8px 12px;}
+@keyframes camPan{0%,100%{transform:rotate(-4deg);}50%{transform:rotate(5deg);}}
+.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff2a2a;margin-left:5px;vertical-align:middle;animation:recBlink 1.2s steps(1,end) infinite;}
+
+/* ---------- شاشة الكاميرات (مثل جهاز XVR) ---------- */
+.cams{position:fixed;inset:0;z-index:300;background:#000;display:none;
+  grid-template-columns:1fr;grid-template-rows:1fr 1fr;gap:2px;
+  background:#9aa3ad;padding:0;direction:ltr;}
+.cams.on{display:grid;animation:camIn .35s ease both;}
+@keyframes camIn{from{opacity:0;}to{opacity:1;}}
+@media (orientation:landscape){.cams{grid-template-columns:1fr 1fr;grid-template-rows:1fr;}}
+.cam{position:relative;background:#050505;overflow:hidden;user-select:none;-webkit-user-select:none;
+  font-family:Arial,Helvetica,sans-serif;}
+.cam .xvr{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-weight:700;letter-spacing:1px;color:#e6c08a;font-size:clamp(34px,9vmin,64px);text-shadow:0 1px 0 rgba(0,0,0,.6);}
+.cam .stamp{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:10px;font-size:clamp(11px,2.6vmin,15px);
+  font-weight:700;color:#fff;letter-spacing:.5px;text-shadow:1px 1px 2px #000,0 0 3px #000;font-variant-numeric:tabular-nums;}
+.cam .name{position:absolute;left:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:5px;
+  font-size:clamp(11px,2.6vmin,15px);font-weight:700;color:#fff;text-shadow:1px 1px 2px #000;}
+.cam .name svg{width:18px;height:12px;fill:#fff;opacity:.9;}
+.cam .rec{position:absolute;right:10px;top:calc(8px + env(safe-area-inset-top,0px));width:10px;height:10px;border-radius:50%;
+  background:#ff2a2a;box-shadow:0 0 6px #ff2a2a;animation:recBlink 1.2s steps(1,end) infinite;}
+.camClose{position:fixed;z-index:310;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  display:none;border:0;border-radius:999px;padding:9px 20px;font:800 14px 'Cairo',sans-serif;color:#fff;cursor:pointer;
+  background:rgba(20,20,20,.78);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset;}
+.camClose.on{display:block;}
+@media (orientation:landscape){.camClose{bottom:auto;top:calc(10px + env(safe-area-inset-top,0px));}}
+
 /* انتقال الدخول */
 .warp{position:fixed;inset:0;z-index:100;pointer-events:none;background:var(--wc,#124b3c);
   clip-path:circle(0 at var(--wx,50%) var(--wy,50%));transition:clip-path .55s cubic-bezier(.6,0,.2,1);}
@@ -160,10 +193,10 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
   .dock{display:none;}
   .logo{width:92px;height:92px;margin-bottom:10px;}
   .ask{margin-top:14px;}
-  .tiles{max-width:1040px;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:40px;}
+  .tiles{max-width:1240px;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:40px;}
   .face{flex-direction:column;justify-content:center;text-align:center;min-height:380px;gap:20px;padding:30px 22px;}
   .ico{width:118px;height:118px;transform:translateZ(80px);} .ico::before{inset:-9px;} .ico svg{width:66px;height:66px;}
-  .txt{flex:none;transform:translateZ(50px);} .txt h2{font-size:27px;} .txt p{font-size:15px;}
+  .txt{flex:none;transform:translateZ(50px);} .txt h2{font-size:23px;} .txt p{font-size:14px;}
   .arrow{transform:translateZ(64px);} .num{font-size:170px;}
   .tile:hover .arrow{transform:translateZ(64px) scale(1.12);}
 }
@@ -224,6 +257,16 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
     </div></div></div>
   </a>
 
+  <a class="tile t4" href="#" id="camTile" role="button" style="--i:3">
+    <div class="float"><div class="tilt"><div class="face">
+      <div class="plate"><div class="pat"></div></div>
+      <div class="num" aria-hidden="true">4</div>
+      <div class="ico a-cam"><svg viewBox="0 0 24 24"><g class="cambody"><rect x="3" y="7" width="14" height="7.5" rx="1.8"/><path d="M17 9.2l4-1.7v7l-4-1.7"/><circle cx="7.2" cy="10.8" r="1.5"/></g><path d="M10 14.5v3.5M6.5 18h7"/><circle class="rec" cx="19.6" cy="4.6" r="2"/></svg></div>
+      <div class="txt"><h2>كاميرا مراقبة اللجنة</h2><p>مشاهدة كاميرات اللجنة لحظة بلحظة</p><span class="chip"><i class="dot"></i>بث مباشر • كاميرتان</span></div>
+      <div class="arrow"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>
+    </div></div></div>
+  </a>
+
 </main>
 
 <div class="foot">برمجة وتطوير المهندس / <a href="https://web.facebook.com/en.mohamed.nasr" target="_blank" rel="noopener">محمد حماد</a></div>
@@ -240,6 +283,12 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
     <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>البحث
   </a>
 </nav>
+
+<div class="cams" id="cams" aria-hidden="true">
+  <div class="cam"><div class="stamp" data-clock></div><i class="rec"></i><div class="xvr">XVR</div><div class="name"><svg viewBox="0 0 18 12"><path d="M1 2h10v8H1zM12 5l5-3v8l-5-3z"/></svg>CAM1</div></div>
+  <div class="cam"><div class="stamp" data-clock></div><i class="rec"></i><div class="xvr">XVR</div><div class="name"><svg viewBox="0 0 18 12"><path d="M1 2h10v8H1zM12 5l5-3v8l-5-3z"/></svg>CAM2</div></div>
+</div>
+<button class="camClose" id="camClose" type="button">✕ إغلاق الكاميرات</button>
 
 <div class="warp" id="warp" aria-hidden="true"></div>
 
@@ -311,6 +360,36 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
       });
     }, {passive:true});
   }
+})();
+
+/* ===== كاميرات المراقبة ===== */
+(function(){
+  var tile=document.getElementById('camTile'), cams=document.getElementById('cams'), btn=document.getElementById('camClose');
+  var clocks=cams.querySelectorAll('[data-clock]'), timer=null, pushed=false;
+  function p(n){return n<10?'0'+n:''+n;}
+  function tick(){
+    var d=new Date();
+    var t=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+    for(var i=0;i<clocks.length;i++) clocks[i].textContent=t;
+  }
+  function open(){
+    tick(); timer=setInterval(tick,1000);
+    cams.classList.add('on'); btn.classList.add('on'); cams.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+    if(navigator.vibrate) navigator.vibrate(20);
+    try{history.pushState({cam:1},'');pushed=true;}catch(e){}
+  }
+  function close(fromPop){
+    clearInterval(timer);
+    cams.classList.remove('on'); btn.classList.remove('on'); cams.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+    if(pushed&&!fromPop){pushed=false;try{history.back();}catch(e){}} else pushed=false;
+  }
+  tile.addEventListener('click',function(e){e.preventDefault();open();});
+  tile.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+  btn.addEventListener('click',function(){close(false);});
+  window.addEventListener('popstate',function(){if(cams.classList.contains('on'))close(true);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&cams.classList.contains('on'))close(false);});
 })();
 
 /* ===== تثبيت التطبيق (أيقونة على شاشة الهاتف) ===== */
