@@ -630,7 +630,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 /* مسار جديد فارغ = بداية جديدة لكل الاستبيانات (البيانات القديمة تحت "assembly" لم تُمس) */
-const ROOT = "assembly_v3/";
+const MAIN_ROOT = "assembly_v3/";
+/* يوزر "all": مسار بيانات منفصل تماماً وفارغ — لا يرى ولا يؤثر على بيانات باقى اليوزرات */
+const SANDBOX_USER = "all";
+const SANDBOX_ROOT = "assembly_sandbox_all/";
+let ROOT = MAIN_ROOT;
+function isSandbox(){ return !!currentUser && currentUser.name === SANDBOX_USER; }
 
 /* ================= Admins ================= */
 const ADMINS = [
@@ -642,10 +647,11 @@ const ADMINS = [
   { name: "علي اسامة",      pass: "al2080" },
   { name: "اسلام عبد المجيد", pass: "is2090" },
   { name: "محمد معاطي",     pass: "mo2100" },
-  { name: "جمال ذكي",       pass: "ga2110" }
+  { name: "جمال ذكي",       pass: "ga2110" },
+  { name: "all",            pass: "123456" }
 ];
 const SUPER_ADMIN = "محمد حماد"; // صلاحية كاملة: تصنيف مباشر بدون 5 تصويتات + تحديد المتوفي
-function isSuper(){ return !!currentUser && currentUser.name === SUPER_ADMIN; }
+function isSuper(){ return !!currentUser && (currentUser.name === SUPER_ADMIN || currentUser.name === SANDBOX_USER); }
 const VOTE_THRESHOLD = 5; // عدد الأصوات الذي يحسم حالة العضو تلقائياً
 
 /* ================= Members (from Excel) ================= */
@@ -873,13 +879,37 @@ function doLogin(){
   showApp();
 }
 function doLogout(){
+  detachListeners();
+  ROOT = MAIN_ROOT;
   currentUser = null;
   localStorage.removeItem("assembly_user");
   document.getElementById("app").classList.add("hidden");
   document.getElementById("loginScreen").classList.remove("hidden");
   document.getElementById("adminPass").value = "";
 }
+const LISTEN_PATHS = ["members","memberNo","names","phones","extra","deceased","deleted","logs"];
+function detachListeners(){
+  try{ db.ref(".info/connected").off(); }catch(e){}
+  LISTEN_PATHS.forEach(p => { try{ db.ref(ROOT + p).off(); }catch(e){} });
+}
+function resetData(){
+  membersDataRaw = {}; memberNoRaw = {}; namesRaw = {}; phonesRaw = {};
+  extraRaw = {}; deceasedRaw = {}; deletedRaw = {};
+  currentTab = "all"; currentYear = "2025";
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === "all"));
+  document.querySelectorAll(".year-btn").forEach(b => b.classList.toggle("active", b.dataset.year === "2025"));
+  const lg = document.getElementById("logList");
+  if(lg) lg.innerHTML = '<div class="log-empty">لا توجد عمليات بعد</div>';
+  rebuildMembers();
+}
+function startSession(){
+  detachListeners();
+  ROOT = isSandbox() ? SANDBOX_ROOT : MAIN_ROOT;
+  resetData();
+  attachListeners();
+}
 function showApp(){
+  startSession();
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   document.getElementById("currentUserName").innerHTML = escapeHtml(currentUser.name) + (isSuper() ? '<span class="super-badge">صلاحية كاملة</span>' : '');
@@ -1573,7 +1603,6 @@ if(window.matchMedia && window.matchMedia("(max-width:720px)").matches){
   document.getElementById("logPanel").classList.add("collapsed");
 }
 initLoginSelect();
-attachListeners();
 
 const savedUser = localStorage.getItem("assembly_user");
 if(savedUser){
