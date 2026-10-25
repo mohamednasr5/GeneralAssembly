@@ -154,6 +154,25 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
 .cam .name svg{width:18px;height:12px;fill:#fff;opacity:.9;}
 .cam .rec{position:absolute;right:10px;top:calc(8px + env(safe-area-inset-top,0px));width:10px;height:10px;border-radius:50%;z-index:2;
   background:#ff2a2a;box-shadow:0 0 6px #ff2a2a;animation:recBlink 1.2s steps(1,end) infinite;}
+/* ---------- بوابة كلمة السر للكاميرات ---------- */
+.gate{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:20px;
+  background:rgba(4,16,13,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
+.gate.on{display:flex;animation:camIn .25s ease both;}
+.gate .box{width:100%;max-width:320px;text-align:center;padding:22px 18px 18px;border-radius:24px;
+  background:linear-gradient(160deg,#17493e,#0c2a24);box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1.5px rgba(214,168,56,.55);}
+.gate .lock{width:46px;height:46px;margin:0 auto 8px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(214,168,56,.14);}
+.gate .lock svg{width:24px;height:24px;fill:none;stroke:#f6d77c;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+.gate h3{font-size:17px;font-weight:800;color:#f4f1e8;margin-bottom:12px;}
+.gate input{width:100%;border:1.5px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);color:#fff;border-radius:14px;
+  padding:12px 14px;font:700 20px 'Cairo',sans-serif;text-align:center;letter-spacing:6px;outline:none;direction:ltr;}
+.gate input:focus{border-color:#d6a838;}
+.gate .err{min-height:20px;margin:8px 0 2px;font-size:13px;font-weight:700;color:#ff8a8a;}
+.gate .row{display:flex;gap:10px;margin-top:6px;}
+.gate button{flex:1;border:0;border-radius:14px;padding:11px 0;font:800 15px 'Cairo',sans-serif;cursor:pointer;color:#f4f1e8;background:rgba(255,255,255,.12);}
+.gate button.ok{background:linear-gradient(90deg,#d6a838,#f0c75a);color:#1b1608;}
+.gate .box.shake{animation:shake .35s ease;}
+@keyframes shake{0%,100%{transform:none;}20%{transform:translateX(-9px);}40%{transform:translateX(9px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+
 /* ---------- الرؤية الليلية (من 6 مساءً إلى 6 صباحاً) ---------- */
 .cams.night .feed{filter:grayscale(1) contrast(1.2) brightness(.98) saturate(0);}
 .cams.night .feed+.shade{
@@ -326,6 +345,16 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
   <div class="cam" data-cam="4" data-off="1" tabindex="0"><div class="xvr">XVR</div><div class="stamp" data-clock></div><button class="spk" type="button" aria-label="الصوت"><svg viewBox="0 0 24 24"><path class="body" d="M3 9.5v5h3.6L12 19V5L6.6 9.5z"/><path class="w1" d="M15.2 9.2a4 4 0 0 1 0 5.6"/><path class="w2" d="M17.8 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="x" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></svg></button><div class="name"><svg viewBox="0 0 18 12"><path d="M1 2h10v8H1zM12 5l5-3v8l-5-3z"/></svg>CAM4</div></div>
 </div>
 <button class="camClose" id="camClose" type="button">✕ إغلاق الكاميرات</button>
+
+<div class="gate" id="gate" aria-hidden="true">
+  <div class="box" id="gateBox">
+    <div class="lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9.5" rx="2.2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+    <h3>أدخل كلمة السر</h3>
+    <input id="gateIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="كلمة السر">
+    <div class="err" id="gateErr"></div>
+    <div class="row"><button type="button" id="gateNo">إلغاء</button><button type="button" class="ok" id="gateOk">دخول</button></div>
+  </div>
+</div>
 
 <div class="warp" id="warp" aria-hidden="true"></div>
 
@@ -609,8 +638,28 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
     if(cur){ if(fullPushed){try{history.back();}catch(e){unfull();fullPushed=false;}} else unfull(); }
     else close(false);
   }
-  tile.addEventListener('click',function(e){e.preventDefault();open();});
-  tile.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+  /* ---------- كلمة السر (تُحفظ فى المتصفح بعد أول إدخال صحيح) ---------- */
+  var KEY='ahm_cam_ok', OKH=465665915373229, gate=document.getElementById('gate'), gin=document.getElementById('gateIn'),
+      gerr=document.getElementById('gateErr'), gbox=document.getElementById('gateBox');
+  function hash(s){ s='ahm#cam:'+s; var h1=0xdeadbeef,h2=0x41c6ce57,i,c;
+    for(i=0;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
+    h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+    h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+    return 4294967296*(2097151&h2)+(h1>>>0); }
+  function saved(){try{return localStorage.getItem(KEY)===String(OKH);}catch(e){return false;}}
+  function remember(){try{localStorage.setItem(KEY,String(OKH));}catch(e){}}
+  function showGate(){gin.value='';gerr.textContent='';gate.classList.add('on');gate.setAttribute('aria-hidden','false');setTimeout(function(){gin.focus();},60);}
+  function hideGate(){gate.classList.remove('on');gate.setAttribute('aria-hidden','true');gin.blur();}
+  function submit(){
+    if(hash(gin.value.trim())===OKH){remember();hideGate();open();}
+    else{gerr.textContent='كلمة السر غير صحيحة';gin.value='';gbox.classList.remove('shake');void gbox.offsetWidth;gbox.classList.add('shake');if(navigator.vibrate)navigator.vibrate(60);}
+  }
+  function request(){ if(saved()) open(); else showGate(); }
+  document.getElementById('gateOk').addEventListener('click',submit);
+  document.getElementById('gateNo').addEventListener('click',hideGate);
+  gin.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submit();}else if(e.key==='Escape')hideGate();});
+  tile.addEventListener('click',function(e){e.preventDefault();request();});
+  tile.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();request();}});
   btn.addEventListener('click',back);
   window.addEventListener('popstate',function(){
     if(cur){fullPushed=false;unfull();}
