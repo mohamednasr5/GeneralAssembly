@@ -154,6 +154,15 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
 .cam .name svg{width:18px;height:12px;fill:#fff;opacity:.9;}
 .cam .rec{position:absolute;right:10px;top:calc(8px + env(safe-area-inset-top,0px));width:10px;height:10px;border-radius:50%;z-index:2;
   background:#ff2a2a;box-shadow:0 0 6px #ff2a2a;animation:recBlink 1.2s steps(1,end) infinite;}
+/* ---------- الرؤية الليلية (من 6 مساءً إلى 6 صباحاً) ---------- */
+.cams.night .feed{filter:grayscale(1) contrast(1.2) brightness(.98) saturate(0);}
+.cams.night .feed+.shade{
+  background:
+    radial-gradient(75% 65% at 50% 52%,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 55%,rgba(0,0,0,.55) 100%),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px);}
+.cams.night .feed+.shade::after{content:"";position:absolute;inset:-60px;opacity:.16;mix-blend-mode:overlay;
+  background-image:var(--grain);background-size:128px 128px;animation:grain .45s steps(1,end) infinite;}
+@keyframes grain{0%{transform:translate(0,0);}20%{transform:translate(-37px,21px);}40%{transform:translate(29px,-44px);}60%{transform:translate(-18px,-31px);}80%{transform:translate(41px,33px);}100%{transform:translate(0,0);}}
 /* التكبير بكامل الشاشة */
 .cam.full{position:fixed;inset:0;z-index:305;cursor:default;
   transition:clip-path .38s cubic-bezier(.3,.7,.2,1);}
@@ -399,6 +408,19 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
     var d=new Date();
     var t=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
     for(var i=0;i<clocks.length;i++) clocks[i].textContent=t;
+    var hr=cairoHour(d), night=(hr>=18||hr<6), fq=/[?&]night=([01])/.exec(location.search); if(fq) night=(fq[1]==='1'); /* للمعاينة: ?night=1 ليل، ?night=0 نهار */
+    if(night!==isNight){isNight=night; cams.classList.toggle('night',night); if(night) makeGrain();}
+  }
+  var isNight=null;
+  function cairoHour(d){ /* ساعة القاهرة بغض النظر عن إعدادات الجهاز */
+    try{var v=new Intl.DateTimeFormat('en-GB',{hour:'2-digit',hour12:false,timeZone:'Africa/Cairo'}).format(d); var n=parseInt(v,10); if(!isNaN(n)) return n%24;}catch(e){}
+    return d.getHours();
+  }
+  function makeGrain(){
+    if(cams.style.getPropertyValue('--grain')) return;
+    var c=document.createElement('canvas'); c.width=c.height=128; var x=c.getContext('2d'), im=x.createImageData(128,128);
+    for(var i=0;i<im.data.length;i+=4){var v=Math.random()*255; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=255;}
+    x.putImageData(im,0,0); cams.style.setProperty('--grain','url('+c.toDataURL()+')');
   }
 
   /* ---------- صوت الرياح (Web Audio) : لكل كاميرا طابع مختلف وبعيد كأنه خارج المبنى ---------- */
@@ -535,7 +557,7 @@ h1{font-size:clamp(21px,5.6vw,34px);font-weight:900;line-height:1.5;text-shadow:
 
   /* ---------- فتح/إغلاق ---------- */
   function open(){
-    tick(); timer=setInterval(tick,1000); swayStart();
+    isNight=null; tick(); timer=setInterval(tick,1000); swayStart();
     cams.classList.add('on'); btn.classList.add('on'); btn.textContent='✕ إغلاق الكاميرات'; cams.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
     if(navigator.vibrate) navigator.vibrate(20);
