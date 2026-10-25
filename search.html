@@ -162,6 +162,29 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .homebtn{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:12px;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;text-decoration:none;background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.42);box-shadow:0 3px 10px rgba(0,0,0,.2);transition:transform .12s,background .2s;z-index:25;}
 .homebtn:active{transform:scale(.9);background:rgba(214,168,56,.55);}
 .homebtn:focus-visible{outline:3px solid #c8992f;outline-offset:2px;}
+
+/* ---------- شريط قائمة الشباب ---------- */
+.ticker{max-width:980px;margin:22px auto 0;padding:0 14px;display:none}
+.ticker.show{display:block}
+.tk-wrap{display:flex;align-items:stretch;background:var(--primary);border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(18,60,52,.28);border:1px solid rgba(200,153,47,.45);direction:rtl}
+.tk-badge{flex:none;display:flex;align-items:center;gap:8px;padding:0 18px;background:linear-gradient(145deg,var(--accent),var(--accent-dark));color:#fff;font-weight:900;font-size:clamp(14px,3.8vw,18px);white-space:nowrap;position:relative;z-index:2;box-shadow:-6px 0 14px rgba(0,0,0,.25)}
+.tk-badge svg{width:20px;height:20px;animation:tkpulse 1.6s ease-in-out infinite}
+.tk-view{flex:1;min-width:0;overflow:hidden;direction:ltr;padding:16px 0}
+.tk-track{display:flex;width:max-content;animation:tkmove 55s linear infinite;will-change:transform}
+.tk-view:hover .tk-track,.tk-view:active .tk-track{animation-play-state:paused}
+.tk-set{display:flex;align-items:center;flex:none;direction:rtl}
+.tk-item{display:flex;flex-direction:row;align-items:center;gap:8px;padding:0 4px;white-space:nowrap;line-height:1.5}
+.tk-role{color:#ff5a5a;font-weight:900;font-size:clamp(13px,3.6vw,16px)}
+.tk-name{color:#fff;font-weight:700;font-size:clamp(14px,4vw,18px)}
+.tk-note .tk-role{font-size:clamp(13px,3.6vw,16px);color:#ff5a5a}
+.tk-names{display:flex;flex-direction:row;align-items:center}
+.tk-sep{flex:none;width:34px;height:34px;margin:0 14px;display:flex;align-items:center;justify-content:center}
+.tk-sep svg{width:26px;height:26px;color:var(--accent);animation:tkspin 3.2s linear infinite;filter:drop-shadow(0 0 6px rgba(200,153,47,.7))}
+@keyframes tkmove{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+@keyframes tkspin{to{transform:rotate(360deg)}}
+@keyframes tkpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+@media (max-width:600px){.tk-badge{padding:0 10px;gap:5px}.tk-badge svg{width:16px;height:16px}.tk-sep{margin:0 8px}.tk-track{animation-duration:45s}}
+@media (prefers-reduced-motion:reduce){.tk-track{animation-duration:200s}.tk-sep svg,.tk-badge svg{animation:none}}
 </style>
 </head>
 <body>
@@ -184,6 +207,23 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 <main id="results"></main>
 <div class="foot">برمجة وتطوير المهندس / <a href="https://web.facebook.com/en.mohamed.nasr" target="_blank" rel="noopener" style="color:var(--primary-2);font-weight:800;text-decoration:none;">محمد حماد</a></div>
 
+
+
+<section class="ticker" id="ticker" aria-label="قائمة الشباب">
+  <div class="tk-wrap">
+    <div class="tk-badge"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg>قائمة الشباب</div>
+    <div class="tk-view"><div class="tk-track"><div class="tk-set"><div class="tk-item"><span class="tk-role">منصب الرئيس</span><span class="tk-names"><span class="tk-name">محمد محمد إبراهيم العشري</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item"><span class="tk-role">منصب نائب الرئيس</span><span class="tk-names"><span class="tk-name">يحيى يحيى النجار</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item"><span class="tk-role">منصب أمين الصندوق</span><span class="tk-names"><span class="tk-name">إسلام عبده عبد المجيد</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item"><span class="tk-role">الأعضاء تحت السن</span><span class="tk-names"><span class="tk-name">جمال جمال زكي</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">علي أسامة خليل</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">محمد أبو المعاطي حماد</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">مصطفى الحسن أبو زيد</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">أحمد محمد السيد</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item tk-note"><span class="tk-role">تنويه: لا بد من اختيار عدد 8 أشخاص في الورقة</span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span></div><div class="tk-set" aria-hidden="true"><div class="tk-item"><span class="tk-role">منصب الرئيس</span><span class="tk-names"><span class="tk-name">محمد محمد إبراهيم العشري</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item"><span class="tk-role">منصب نائب الرئيس</span><span class="tk-names"><span class="tk-name">يحيى يحيى النجار</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item"><span class="tk-role">منصب أمين الصندوق</span><span class="tk-names"><span class="tk-name">إسلام عبده عبد المجيد</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item"><span class="tk-role">الأعضاء تحت السن</span><span class="tk-names"><span class="tk-name">جمال جمال زكي</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">علي أسامة خليل</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">محمد أبو المعاطي حماد</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">مصطفى الحسن أبو زيد</span><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><span class="tk-name">أحمد محمد السيد</span></span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span><div class="tk-item tk-note"><span class="tk-role">تنويه: لا بد من اختيار عدد 8 أشخاص في الورقة</span></div><span class="tk-sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5l2.6 6.4 6.9.5-5.3 4.5 1.7 6.7L12 15.9l-5.9 3.7 1.7-6.7L2.5 8.4l6.9-.5z"/></svg></span></div></div></div>
+  </div>
+</section>
+<script>
+(function(){
+  var q=document.getElementById('q'),tk=document.getElementById('ticker');
+  if(!q||!tk)return;
+  function upd(){tk.classList.toggle('show',!q.value.trim());}
+  ['input','change','keyup'].forEach(function(e){q.addEventListener(e,upd);});
+  setInterval(upd,300);upd();
+})();
+</script>
 
 <div class="modal" id="waModal" role="dialog" aria-modal="true" aria-labelledby="waTitle">
   <div class="mbox">
