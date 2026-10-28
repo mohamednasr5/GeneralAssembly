@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#123c34">
+<title>فرز الصندوق - مركز شباب الأحمدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#f5f3ee;--surface:#fff;--ink:#20241f;--muted:#6b7268;--line:#e2ded3;--primary:#123c34;--primary-light:#1e5c50;--accent:#c8992f;--accent-bg:#fbf1d6;--good:#2f7d5b;--good-bg:#e7f4ee;--bad:#b3403f;--bad-bg:#faeaea;--radius:10px;--shadow:0 2px 10px rgba(18,60,52,.08)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;padding-top:env(safe-area-inset-top,0px);overflow-x:hidden}
+button{font-family:inherit;touch-action:manipulation;cursor:pointer}
+.top{background:var(--primary);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.top h1{font-size:18px;margin:0;font-weight:800}
+.top p{margin:2px 0 0;font-size:12.5px;color:#c9dcd6}
+.conn{display:flex;align-items:center;gap:6px;font-size:12px;background:rgba(255,255,255,.1);padding:5px 11px;border-radius:999px}
+.conn i{width:8px;height:8px;border-radius:50%;background:#e0a93a}
+.conn.live i{background:#4fd18c}.conn.offline i{background:#e05a5a}
+main{max-width:1100px;margin:0 auto;padding:18px 14px calc(150px + env(safe-area-inset-bottom,0px))}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.stat{padding:16px;text-align:center}
+.stat .n{font-size:40px;font-weight:800;line-height:1}
+.stat .l{margin-top:6px;font-size:14px;font-weight:700;color:var(--muted)}
+.stat .p{margin-top:6px;font-size:15px;font-weight:800}
+.s-att .n{color:var(--primary)}.s-ok .n,.s-ok .p{color:var(--good)}.s-bad .n,.s-bad .p{color:var(--bad)}
+.win-panel{margin-bottom:16px;border-color:var(--accent)}
+.win-panel h2{margin:0;padding:12px 16px;font-size:16px;background:var(--accent-bg);border-radius:var(--radius) var(--radius) 0 0;color:#7a5a12}
+.win-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0}
+.wbox{padding:12px 16px;border-top:1px solid var(--line)}
+.wbox:nth-child(odd){border-left:1px solid var(--line)}
+.wbox .t{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.wl{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:15px;padding:3px 0}
+.wl b{color:var(--primary);white-space:nowrap}
+.wl.tie{color:var(--bad)}
+.none{color:var(--muted);font-size:14px}
+.sec{margin-bottom:16px;overflow:hidden}
+.sec h3{margin:0;padding:11px 16px;background:var(--primary);color:#fff;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.sec h3 small{font-size:12px;font-weight:600;color:#c9dcd6}
+.row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.row.win{background:var(--accent-bg)}
+.row.tie{background:var(--bad-bg)}
+.row.picked{outline:2px solid var(--good);outline-offset:-2px;background:var(--good-bg)}
+.rk{width:26px;height:26px;border-radius:50%;background:var(--line);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.row.win .rk{background:var(--accent);color:#fff}
+.nm{flex:1;min-width:0;font-weight:700;font-size:15.5px}
+.bar{height:6px;background:var(--line);border-radius:4px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--primary-light);border-radius:4px;transition:width .25s}
+.row.win .bar i{background:var(--accent)}
+.vt{text-align:center;min-width:56px}
+.vt b{display:block;font-size:26px;line-height:1;color:var(--primary)}
+.vt span{font-size:11.5px;color:var(--muted);font-weight:600}
+.plus{width:52px;height:52px;border-radius:12px;border:2px solid var(--primary);background:#fff;color:var(--primary);font-size:32px;font-weight:700;line-height:1;flex:none}
+.plus:active{transform:scale(.94)}
+.row.picked .plus{background:var(--good);border-color:var(--good);color:#fff;font-size:26px}
+.badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;margin-right:6px;vertical-align:middle}
+.b-win{background:var(--accent);color:#fff}.b-tie{background:var(--bad);color:#fff}
+.tools{display:flex;gap:10px;flex-wrap:wrap;padding:14px}
+.btn{border:none;border-radius:8px;padding:11px 16px;font-weight:700;font-size:14px}
+.b1{background:var(--primary);color:#fff}.b2{background:#fff;border:1px solid var(--line);color:var(--ink)}.b3{background:var(--bad);color:#fff}
+.bar-bottom{position:fixed;inset:auto 0 0 0;background:#fff;border-top:3px solid var(--primary);box-shadow:0 -4px 16px rgba(0,0,0,.12);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));z-index:20}
+.bb-in{max-width:1100px;margin:0 auto}
+.cur{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.cur b{color:var(--primary)}
+.acts{display:flex;gap:8px}
+.acts .btn{flex:1;padding:14px 8px;font-size:16px}
+.acts .ok{background:var(--good);color:#fff;flex:2}.acts .no{background:var(--bad);color:#fff;flex:2}
+.acts .sm{flex:1;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px}
+dialog{border:none;border-radius:var(--radius);padding:22px;max-width:360px;width:calc(100% - 32px);font-family:inherit;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog p{margin:0 0 12px;font-weight:700}
+dialog input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:18px;text-align:center;letter-spacing:4px;font-family:inherit}
+#derr{color:var(--bad);font-size:13px;min-height:20px;margin:6px 0}
+.dbtn{display:flex;gap:8px}.dbtn .btn{flex:1}
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#20241f;color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;font-size:14px;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+@media(max-width:600px){.stat .n{font-size:32px}.win-grid{grid-template-columns:1fr}.wbox:nth-child(odd){border-left:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><h1>فرز الصندوق — انتخابات مجلس الإدارة</h1><p>مركز شباب الأحمدية · دورة ٢٠٢٦ / ٢٠٣٠</p></div>
+  <span class="conn" id="conn"><i></i><span>جارٍ الاتصال…</span></span>
+</header>
+<main>
+  <section class="stats">
+    <div class="card stat s-att"><div class="n" id="sAtt">0</div><div class="l">عدد الحضور (الأوراق)</div></div>
+    <div class="card stat s-ok"><div class="n" id="sOk">0</div><div class="l">أوراق صحيحة</div><div class="p" id="pOk">0%</div></div>
+    <div class="card stat s-bad"><div class="n" id="sBad">0</div><div class="l">أوراق باطلة</div><div class="p" id="pBad">0%</div></div>
+  </section>
+
+  <section class="card win-panel">
+    <h2>🏆 الفائزون حالياً</h2>
+    <div class="win-grid" id="wins"></div>
+  </section>
+
+  <div id="secs"></div>
+
+  <section class="card tools">
+    <button class="btn b1" onclick="exportXls()">⬇ تصدير النتائج (Excel)</button>
+    <button class="btn b2" onclick="restore()">↺ استعادة بعد التصفير</button>
+    <button class="btn b3" onclick="resetAll()">⟲ تصفير الصندوق</button>
+  </section>
+</main>
+
+<div class="bar-bottom"><div class="bb-in">
+  <div class="cur"><span>ورقة رقم <b id="bNo">1</b></span><span id="bSel"></span></div>
+  <div class="acts">
+    <button class="btn ok" onclick="commit(true)">✔ صحيحة</button>
+    <button class="btn no" onclick="commit(false)">✖ باطلة</button>
+    <button class="btn sm" onclick="clearSel()">مسح</button>
+    <button class="btn sm" onclick="undoLast()">↩ تراجع</button>
+  </div>
+</div></div>
+
+<dialog id="dlg">
+  <p id="dmsg"></p>
+  <input id="dpass" type="password" inputmode="numeric" placeholder="كلمة السر" autocomplete="off">
+  <div id="derr"></div>
+  <div class="dbtn"><button class="btn b1" id="dok">تأكيد</button><button class="btn b2" id="dno">إلغاء</button></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const PASS = "521988";
+const POS = [
+  {k:"p", t:"منصب رئيس مجلس الإدارة", n:1, c:["بكر بكر احمد عبدالرازق","محمد الحسيني يونس محمد","محمد محمد ابراهيم العشري"]},
+  {k:"v", t:"منصب نائب رئيس مجلس الإدارة", n:1, c:["احمد احمد محمد عماره","يحيى يحيى محمد احمد النجار"]},
+  {k:"t", t:"منصب أمين الصندوق", n:1, c:["اسلام عبده عبد المجيد","إيمان عاطف مجاهد عبدالرازق"]},
+  {k:"u", t:"منصب الأعضاء تحت السن", n:5, c:["احمد اشرف حنذق البغدادي","امين علي عماره محمد عماره","جمال جمال زكي محمد عبدالرازق","خالد عباس عباس يوسف","علي اسامة علي خليل","كريمه محمد محمد رشاد عيد حموده","محمد ابو المعاطي الداودي ابو المعاطي","محمد نبيل ابراهيم سليم","مصطفى الحسن مصطفى ابو زيد"]}
+];
+POS.forEach(p => p.c = p.c.map((name,i) => ({id:p.k+(i+1), name})));
+
+/* ---------- storage: Firebase (shared live) with local fallback ---------- */
+const FBCFG = {apiKey:"AIzaSyCnmHODYvozhVWuHto7MUXDM_DuTKpMUxc",authDomain:"maaana-879b4.firebaseapp.com",databaseURL:"https://maaana-879b4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"maaana-879b4",storageBucket:"maaana-879b4.firebasestorage.app",messagingSenderId:"481238809279",appId:"1:481238809279:web:345c1d655b56699231e40a"};
+const ROOT = "last_v1/", LS = "last_v1";
+let FB = null, ballots = {}, sel = new Set();
+try { firebase.initializeApp(FBCFG); FB = firebase.database(); } catch(e) { FB = null; }
+const $ = id => document.getElementById(id);
+const lget = () => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch(e) { return {}; } };
+const lput = o => { try { localStorage.setItem(LS, JSON.stringify(o)); } catch(e) {} };
+function setConn(s, txt){ $("conn").className = "conn " + s; $("conn").lastChild.textContent = txt; }
+
+function start(){
+  if(FB){
+    FB.ref(".info/connected").on("value", s => s.val() ? setConn("live","متصل — مزامنة مباشرة") : setConn("offline","غير متصل"));
+    FB.ref(ROOT + "ballots").on("value", s => { ballots = s.val() || {}; render(); }, () => { setConn("offline","تعذّر الوصول لقاعدة البيانات"); });
+  } else {
+    setConn("offline","وضع محلي (بدون مزامنة)");
+    ballots = lget().ballots || {}; render();
+  }
+}
+function addBallot(b){
+  if(FB) FB.ref(ROOT + "ballots").push(b);
+  else { const o = lget(); o.ballots = o.ballots || {}; o.ballots["l" + Date.now()] = b; lput(o); ballots = o.ballots; render(); }
+}
+function removeBallot(id){
+  if(FB) FB.ref(ROOT + "ballots/" + id).remove();
+  else { const o = lget(); delete o.ballots[id]; lput(o); ballots = o.ballots; render(); }
+}
+async function getBackup(){
+  if(FB){ const s = await FB.ref(ROOT + "backup").once("value"); return s.val(); }
+  return lget().backup || null;
+}
+async function setAll(bs, backup){
+  if(FB){ if(backup !== undefined) await FB.ref(ROOT + "backup").set(backup); await FB.ref(ROOT + "ballots").set(bs); }
+  else { const o = lget(); o.ballots = bs || {}; if(backup !== undefined) o.backup = backup; lput(o); ballots = o.ballots; render(); }
+}
+
+/* ---------- calculations ---------- */
+function calc(){
+  const c = {}; let valid = 0, inv = 0;
+  Object.values(ballots).forEach(b => {
+    if(b.valid){ valid++; (b.picks || []).forEach(i => c[i] = (c[i] || 0) + 1); } else inv++;
+  });
+  return {c, valid, inv, total: valid + inv};
+}
+function ranked(p, c){
+  const a = p.c.map(x => ({...x, v: c[x.id] || 0}));
+  const sorted = a.slice().sort((x,y) => y.v - x.v);
+  const last = sorted[p.n - 1], next = sorted[p.n];
+  const tieV = (last && next && next.v > 0 && last.v === next.v) ? last.v : -1;
+  const st = {};
+  sorted.forEach((x,i) => { st[x.id] = x.v > 0 && (i < p.n || x.v === tieV) ? (x.v === tieV ? "tie" : "win") : ""; });
+  return {a, sorted, st, rank: Object.fromEntries(sorted.map((x,i) => [x.id, i+1]))};
+}
+const pct = (a,b) => b ? (a / b * 100).toFixed(1).replace(/\.0$/,"") + "%" : "0%";
+
+/* ---------- render ---------- */
+function render(){
+  const {c, valid, inv, total} = calc();
+  $("sAtt").textContent = total; $("sOk").textContent = valid; $("sBad").textContent = inv;
+  $("pOk").textContent = pct(valid,total); $("pBad").textContent = pct(inv,total);
+  $("bNo").textContent = total + 1;
+
+  $("wins").innerHTML = POS.map(p => {
+    const r = ranked(p, c);
+    const w = r.sorted.filter(x => r.st[x.id]);
+    const body = w.length ? w.map(x => `<div class="wl ${r.st[x.id]==="tie"?"tie":""}"><span>${x.name}${r.st[x.id]==="tie"?" (تعادل)":""}</span><b>${x.v} صوت</b></div>`).join("") : `<div class="none">لا توجد أصوات بعد</div>`;
+    return `<div class="wbox"><div class="t">${p.t.replace("منصب ","")}${p.n>1?" — أعلى "+p.n:""}</div>${body}</div>`;
+  }).join("");
+
+  $("secs").innerHTML = POS.map(p => {
+    const r = ranked(p, c);
+    const rows = r.a.map(x => {
+      const st = r.st[x.id];
+      return `<div class="row ${st} ${sel.has(x.id)?"picked":""}">
+        <span class="rk">${r.rank[x.id]}</span>
+        <div class="nm">${x.name}${st==="win"?'<span class="badge b-win">فائز</span>':st==="tie"?'<span class="badge b-tie">تعادل</span>':""}
+          <div class="bar"><i style="width:${valid ? x.v/valid*100 : 0}%"></i></div></div>
+        <div class="vt"><b>${x.v}</b><span>${pct(x.v,valid)}</span></div>
+        <button class="plus" onclick="tg('${x.id}')" aria-label="إضافة صوت">${sel.has(x.id)?"✓":"+"}</button></div>`;
+    }).join("");
+    return `<section class="card sec"><h3>${p.t}<small>${p.n>1?"أعلى "+p.n+" أصوات يفوزون":"يفوز الأعلى"}</small></h3>${rows}</section>`;
+  }).join("");
+  renderSel();
+}
+function selCount(p){ return p.c.filter(x => sel.has(x.id)).length; }
+function renderSel(){
+  const short = {p:"رئيس", v:"نائب", t:"أمين", u:"تحت السن"};
+  $("bSel").innerHTML = POS.map(p => `${short[p.k]} <b>${selCount(p)}/${p.n}</b>`).join(" · ");
+}
+
+/* ---------- ballot actions ---------- */
+function toast(m){ const t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 1800); }
+function tg(id){
+  if(sel.has(id)) sel.delete(id);
+  else {
+    const p = POS.find(p => p.k === id[0]);
+    if(selCount(p) >= p.n){ toast("الحد الأقصى في هذا المنصب: " + p.n); return; }
+    sel.add(id);
+  }
+  render();
+}
+function clearSel(){ sel.clear(); render(); }
+function commit(ok){
+  if(ok && !sel.size){ toast("اختر مرشحاً أولاً، أو اضغط «باطلة»"); return; }
+  addBallot({ts: Date.now(), valid: ok, picks: ok ? [...sel] : []});
+  sel.clear(); render();
+  toast(ok ? "تم تسجيل ورقة صحيحة ✔" : "تم تسجيل ورقة باطلة ✖");
+}
+function undoLast(){
+  const ids = Object.keys(ballots);
+  if(!ids.length){ toast("لا توجد أوراق للتراجع"); return; }
+  const id = ids.reduce((a,b) => (ballots[a].ts || 0) > (ballots[b].ts || 0) ? a : b);
+  removeBallot(id); toast("تم التراجع عن آخر ورقة");
+}
+
+/* ---------- password-protected ---------- */
+function askPass(msg){
+  return new Promise(res => {
+    const d = $("dlg"); $("dmsg").textContent = msg; $("dpass").value = ""; $("derr").textContent = "";
+    d.showModal(); $("dpass").focus();
+    const ok = () => { if($("dpass").value === PASS){ d.close(); res(true); } else $("derr").textContent = "كلمة السر غير صحيحة"; };
+    $("dok").onclick = ok; $("dno").onclick = () => { d.close(); res(false); };
+    $("dpass").onkeydown = e => { if(e.key === "Enter") ok(); };
+    d.oncancel = () => res(false);
+  });
+}
+async function resetAll(){
+  if(!Object.keys(ballots).length){ toast("الصندوق فارغ بالفعل"); return; }
+  if(!await askPass("تصفير كل الأصوات؟ سيُحفظ نسخة احتياطية يمكن استعادتها.")) return;
+  await setAll({}, {ts: Date.now(), ballots}); sel.clear(); render(); toast("تم التصفير — النسخة محفوظة للاستعادة");
+}
+async function restore(){
+  const bk = await getBackup();
+  if(!bk || !bk.ballots){ toast("لا توجد نسخة احتياطية للاستعادة"); return; }
+  const n = Object.keys(bk.ballots).length;
+  if(!await askPass("استعادة آخر نسخة محفوظة (" + n + " ورقة)؟ سيتم استبدال الأصوات الحالية.")) return;
+  await setAll(bk.ballots); toast("تمت الاستعادة");
+}
+
+/* ---------- export (Excel opens HTML table with colors) ---------- */
+function exportXls(){
+  const {c, valid, inv, total} = calc();
+  const td = (v, s) => `<td style="${s||""}">${v}</td>`;
+  let h = `<html dir="rtl"><head><meta charset="UTF-8"></head><body><table border="1" style="border-collapse:collapse;font-family:Cairo,Arial">
+  <tr><th colspan="5" style="background:#123c34;color:#fff;font-size:16px">نتيجة فرز الصندوق — مركز شباب الأحمدية — دورة 2026 / 2030</th></tr>
+  <tr>${td("عدد الحضور","font-weight:bold")}${td(total)}${td("الصحيحة","font-weight:bold")}${td(valid + " (" + pct(valid,total) + ")")}${td("")}</tr>
+  <tr>${td("الباطلة","font-weight:bold")}${td(inv + " (" + pct(inv,total) + ")")}${td("")}${td("")}${td("")}</tr>`;
+  POS.forEach(p => {
+    const r = ranked(p, c);
+    h += `<tr><th colspan="5" style="background:#c8992f;color:#fff">${p.t}</th></tr>
+    <tr style="background:#e2ded3;font-weight:bold">${td("الترتيب")}${td("الاسم")}${td("عدد الأصوات")}${td("النسبة من الصحيح")}${td("الحالة")}</tr>`;
+    r.sorted.forEach((x,i) => {
+      const s = r.st[x.id], bg = s === "win" ? "background:#ffe9a8;font-weight:bold" : s === "tie" ? "background:#f7c9c9;font-weight:bold" : "";
+      h += `<tr>${td(i+1,bg)}${td(x.name,bg)}${td(x.v,bg)}${td(pct(x.v,valid),bg)}${td(s==="win"?"فائز":s==="tie"?"تعادل":"",bg)}</tr>`;
+    });
+  });
+  h += "</table></body></html>";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + h], {type:"application/vnd.ms-excel;charset=utf-8"}));
+  a.download = "فرز-الصندوق-" + new Date().toISOString().slice(0,10) + ".xls";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+start();
+</script>
+</body>
+</html>
